@@ -1,7 +1,7 @@
 {
 	"InstallScripts" : 
 	[
-		"/Users/zhangchangming/Documents/Code/Codex/build/cmake_install.cmake"
+		"E:/Codex/build/cmake_install.cmake"
 	],
 	"Parallel" : false
 }

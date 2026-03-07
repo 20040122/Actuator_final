@@ -1,3 +1,3 @@
-/Users/zhangchangming/Documents/Code/Codex/build/CMakeFiles/main.dir
-/Users/zhangchangming/Documents/Code/Codex/build/CMakeFiles/edit_cache.dir
-/Users/zhangchangming/Documents/Code/Codex/build/CMakeFiles/rebuild_cache.dir
+E:/Codex/build/CMakeFiles/main.dir
+E:/Codex/build/CMakeFiles/edit_cache.dir
+E:/Codex/build/CMakeFiles/rebuild_cache.dir
