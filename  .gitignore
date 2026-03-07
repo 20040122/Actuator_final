@@ -1,0 +1,33 @@
+# build outputs
+build/
+out/
+
+# CMake generated files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+compile_commands.json
+CTestTestfile.cmake
+Makefile
+
+# executables / binaries
+*.exe
+*.out
+*.app
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dylib
+*.dll
+
+# debug symbols / temp
+*.pdb
+*.ilk
+
+# IDE / editor
+.vscode/
+
+# macOS
+.DS_Store
