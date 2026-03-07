@@ -1,6 +1,15 @@
 # Build directories
 build/
+out/
 cmake-build-*/
+
+# CMake generated files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+compile_commands.json
+CTestTestfile.cmake
+Makefile
 
 # IDE files
 .vscode/
@@ -17,6 +26,13 @@ Thumbs.db
 *.dll
 *.so
 *.dylib
+*.app
+*.o
+*.obj
+*.a
+*.lib
+*.pdb
+*.ilk
 
 # Logs
 *.log

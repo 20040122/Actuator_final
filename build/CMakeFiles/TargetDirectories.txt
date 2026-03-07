@@ -1,3 +1,0 @@
-E:/Codex/build/CMakeFiles/main.dir
-E:/Codex/build/CMakeFiles/edit_cache.dir
-E:/Codex/build/CMakeFiles/rebuild_cache.dir
