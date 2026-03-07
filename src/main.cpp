@@ -21,6 +21,9 @@ void signalHandler(int signal) {
 }
 
 int main(int argc, char* argv[]) {
+#ifdef _WIN32
+    SetConsoleOutputCP(CP_UTF8);
+#endif
     std::cout << "========================================" << std::endl;
     std::cout << "             多星执行系统                " << std::endl;
     std::cout << "========================================" << std::endl;
