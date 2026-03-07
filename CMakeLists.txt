@@ -5,6 +5,16 @@ project(Codex)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+file(GLOB_RECURSE CODEX_SOURCES
+    "${CMAKE_SOURCE_DIR}/src/*.cpp"
+)
+list(REMOVE_ITEM CODEX_SOURCES "${CMAKE_SOURCE_DIR}/src/main.cpp")
+
 add_executable(main
     src/main.cpp
+    ${CODEX_SOURCES}
+)
+
+target_include_directories(main PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/third_party
 )

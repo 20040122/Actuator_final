@@ -86,17 +86,209 @@ CMakeFiles/main.dir/src/main.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/main.dir/src/main.cpp.s"
 	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/zhangchangming/Documents/Code/Codex/src/main.cpp -o CMakeFiles/main.dir/src/main.cpp.s
 
+CMakeFiles/main.dir/src/constraint/evaluator.cpp.o: CMakeFiles/main.dir/flags.make
+CMakeFiles/main.dir/src/constraint/evaluator.cpp.o: /Users/zhangchangming/Documents/Code/Codex/src/constraint/evaluator.cpp
+CMakeFiles/main.dir/src/constraint/evaluator.cpp.o: CMakeFiles/main.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/zhangchangming/Documents/Code/Codex/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/main.dir/src/constraint/evaluator.cpp.o"
+	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/main.dir/src/constraint/evaluator.cpp.o -MF CMakeFiles/main.dir/src/constraint/evaluator.cpp.o.d -o CMakeFiles/main.dir/src/constraint/evaluator.cpp.o -c /Users/zhangchangming/Documents/Code/Codex/src/constraint/evaluator.cpp
+
+CMakeFiles/main.dir/src/constraint/evaluator.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/main.dir/src/constraint/evaluator.cpp.i"
+	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/zhangchangming/Documents/Code/Codex/src/constraint/evaluator.cpp > CMakeFiles/main.dir/src/constraint/evaluator.cpp.i
+
+CMakeFiles/main.dir/src/constraint/evaluator.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/main.dir/src/constraint/evaluator.cpp.s"
+	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/zhangchangming/Documents/Code/Codex/src/constraint/evaluator.cpp -o CMakeFiles/main.dir/src/constraint/evaluator.cpp.s
+
+CMakeFiles/main.dir/src/coordinator/coordinator.cpp.o: CMakeFiles/main.dir/flags.make
+CMakeFiles/main.dir/src/coordinator/coordinator.cpp.o: /Users/zhangchangming/Documents/Code/Codex/src/coordinator/coordinator.cpp
+CMakeFiles/main.dir/src/coordinator/coordinator.cpp.o: CMakeFiles/main.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/zhangchangming/Documents/Code/Codex/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/main.dir/src/coordinator/coordinator.cpp.o"
+	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/main.dir/src/coordinator/coordinator.cpp.o -MF CMakeFiles/main.dir/src/coordinator/coordinator.cpp.o.d -o CMakeFiles/main.dir/src/coordinator/coordinator.cpp.o -c /Users/zhangchangming/Documents/Code/Codex/src/coordinator/coordinator.cpp
+
+CMakeFiles/main.dir/src/coordinator/coordinator.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/main.dir/src/coordinator/coordinator.cpp.i"
+	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/zhangchangming/Documents/Code/Codex/src/coordinator/coordinator.cpp > CMakeFiles/main.dir/src/coordinator/coordinator.cpp.i
+
+CMakeFiles/main.dir/src/coordinator/coordinator.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/main.dir/src/coordinator/coordinator.cpp.s"
+	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/zhangchangming/Documents/Code/Codex/src/coordinator/coordinator.cpp -o CMakeFiles/main.dir/src/coordinator/coordinator.cpp.s
+
+CMakeFiles/main.dir/src/coordinator/distributed_semaphore.cpp.o: CMakeFiles/main.dir/flags.make
+CMakeFiles/main.dir/src/coordinator/distributed_semaphore.cpp.o: /Users/zhangchangming/Documents/Code/Codex/src/coordinator/distributed_semaphore.cpp
+CMakeFiles/main.dir/src/coordinator/distributed_semaphore.cpp.o: CMakeFiles/main.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/zhangchangming/Documents/Code/Codex/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/main.dir/src/coordinator/distributed_semaphore.cpp.o"
+	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/main.dir/src/coordinator/distributed_semaphore.cpp.o -MF CMakeFiles/main.dir/src/coordinator/distributed_semaphore.cpp.o.d -o CMakeFiles/main.dir/src/coordinator/distributed_semaphore.cpp.o -c /Users/zhangchangming/Documents/Code/Codex/src/coordinator/distributed_semaphore.cpp
+
+CMakeFiles/main.dir/src/coordinator/distributed_semaphore.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/main.dir/src/coordinator/distributed_semaphore.cpp.i"
+	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/zhangchangming/Documents/Code/Codex/src/coordinator/distributed_semaphore.cpp > CMakeFiles/main.dir/src/coordinator/distributed_semaphore.cpp.i
+
+CMakeFiles/main.dir/src/coordinator/distributed_semaphore.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/main.dir/src/coordinator/distributed_semaphore.cpp.s"
+	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/zhangchangming/Documents/Code/Codex/src/coordinator/distributed_semaphore.cpp -o CMakeFiles/main.dir/src/coordinator/distributed_semaphore.cpp.s
+
+CMakeFiles/main.dir/src/coordinator/inter_sat_comm.cpp.o: CMakeFiles/main.dir/flags.make
+CMakeFiles/main.dir/src/coordinator/inter_sat_comm.cpp.o: /Users/zhangchangming/Documents/Code/Codex/src/coordinator/inter_sat_comm.cpp
+CMakeFiles/main.dir/src/coordinator/inter_sat_comm.cpp.o: CMakeFiles/main.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/zhangchangming/Documents/Code/Codex/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object CMakeFiles/main.dir/src/coordinator/inter_sat_comm.cpp.o"
+	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/main.dir/src/coordinator/inter_sat_comm.cpp.o -MF CMakeFiles/main.dir/src/coordinator/inter_sat_comm.cpp.o.d -o CMakeFiles/main.dir/src/coordinator/inter_sat_comm.cpp.o -c /Users/zhangchangming/Documents/Code/Codex/src/coordinator/inter_sat_comm.cpp
+
+CMakeFiles/main.dir/src/coordinator/inter_sat_comm.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/main.dir/src/coordinator/inter_sat_comm.cpp.i"
+	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/zhangchangming/Documents/Code/Codex/src/coordinator/inter_sat_comm.cpp > CMakeFiles/main.dir/src/coordinator/inter_sat_comm.cpp.i
+
+CMakeFiles/main.dir/src/coordinator/inter_sat_comm.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/main.dir/src/coordinator/inter_sat_comm.cpp.s"
+	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/zhangchangming/Documents/Code/Codex/src/coordinator/inter_sat_comm.cpp -o CMakeFiles/main.dir/src/coordinator/inter_sat_comm.cpp.s
+
+CMakeFiles/main.dir/src/coordinator/node_registry.cpp.o: CMakeFiles/main.dir/flags.make
+CMakeFiles/main.dir/src/coordinator/node_registry.cpp.o: /Users/zhangchangming/Documents/Code/Codex/src/coordinator/node_registry.cpp
+CMakeFiles/main.dir/src/coordinator/node_registry.cpp.o: CMakeFiles/main.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/zhangchangming/Documents/Code/Codex/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object CMakeFiles/main.dir/src/coordinator/node_registry.cpp.o"
+	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/main.dir/src/coordinator/node_registry.cpp.o -MF CMakeFiles/main.dir/src/coordinator/node_registry.cpp.o.d -o CMakeFiles/main.dir/src/coordinator/node_registry.cpp.o -c /Users/zhangchangming/Documents/Code/Codex/src/coordinator/node_registry.cpp
+
+CMakeFiles/main.dir/src/coordinator/node_registry.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/main.dir/src/coordinator/node_registry.cpp.i"
+	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/zhangchangming/Documents/Code/Codex/src/coordinator/node_registry.cpp > CMakeFiles/main.dir/src/coordinator/node_registry.cpp.i
+
+CMakeFiles/main.dir/src/coordinator/node_registry.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/main.dir/src/coordinator/node_registry.cpp.s"
+	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/zhangchangming/Documents/Code/Codex/src/coordinator/node_registry.cpp -o CMakeFiles/main.dir/src/coordinator/node_registry.cpp.s
+
+CMakeFiles/main.dir/src/executor/generic_executor.cpp.o: CMakeFiles/main.dir/flags.make
+CMakeFiles/main.dir/src/executor/generic_executor.cpp.o: /Users/zhangchangming/Documents/Code/Codex/src/executor/generic_executor.cpp
+CMakeFiles/main.dir/src/executor/generic_executor.cpp.o: CMakeFiles/main.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/zhangchangming/Documents/Code/Codex/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Building CXX object CMakeFiles/main.dir/src/executor/generic_executor.cpp.o"
+	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/main.dir/src/executor/generic_executor.cpp.o -MF CMakeFiles/main.dir/src/executor/generic_executor.cpp.o.d -o CMakeFiles/main.dir/src/executor/generic_executor.cpp.o -c /Users/zhangchangming/Documents/Code/Codex/src/executor/generic_executor.cpp
+
+CMakeFiles/main.dir/src/executor/generic_executor.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/main.dir/src/executor/generic_executor.cpp.i"
+	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/zhangchangming/Documents/Code/Codex/src/executor/generic_executor.cpp > CMakeFiles/main.dir/src/executor/generic_executor.cpp.i
+
+CMakeFiles/main.dir/src/executor/generic_executor.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/main.dir/src/executor/generic_executor.cpp.s"
+	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/zhangchangming/Documents/Code/Codex/src/executor/generic_executor.cpp -o CMakeFiles/main.dir/src/executor/generic_executor.cpp.s
+
+CMakeFiles/main.dir/src/executor/semaphore_manager.cpp.o: CMakeFiles/main.dir/flags.make
+CMakeFiles/main.dir/src/executor/semaphore_manager.cpp.o: /Users/zhangchangming/Documents/Code/Codex/src/executor/semaphore_manager.cpp
+CMakeFiles/main.dir/src/executor/semaphore_manager.cpp.o: CMakeFiles/main.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/zhangchangming/Documents/Code/Codex/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Building CXX object CMakeFiles/main.dir/src/executor/semaphore_manager.cpp.o"
+	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/main.dir/src/executor/semaphore_manager.cpp.o -MF CMakeFiles/main.dir/src/executor/semaphore_manager.cpp.o.d -o CMakeFiles/main.dir/src/executor/semaphore_manager.cpp.o -c /Users/zhangchangming/Documents/Code/Codex/src/executor/semaphore_manager.cpp
+
+CMakeFiles/main.dir/src/executor/semaphore_manager.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/main.dir/src/executor/semaphore_manager.cpp.i"
+	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/zhangchangming/Documents/Code/Codex/src/executor/semaphore_manager.cpp > CMakeFiles/main.dir/src/executor/semaphore_manager.cpp.i
+
+CMakeFiles/main.dir/src/executor/semaphore_manager.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/main.dir/src/executor/semaphore_manager.cpp.s"
+	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/zhangchangming/Documents/Code/Codex/src/executor/semaphore_manager.cpp -o CMakeFiles/main.dir/src/executor/semaphore_manager.cpp.s
+
+CMakeFiles/main.dir/src/executor/simple_executor.cpp.o: CMakeFiles/main.dir/flags.make
+CMakeFiles/main.dir/src/executor/simple_executor.cpp.o: /Users/zhangchangming/Documents/Code/Codex/src/executor/simple_executor.cpp
+CMakeFiles/main.dir/src/executor/simple_executor.cpp.o: CMakeFiles/main.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/zhangchangming/Documents/Code/Codex/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Building CXX object CMakeFiles/main.dir/src/executor/simple_executor.cpp.o"
+	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/main.dir/src/executor/simple_executor.cpp.o -MF CMakeFiles/main.dir/src/executor/simple_executor.cpp.o.d -o CMakeFiles/main.dir/src/executor/simple_executor.cpp.o -c /Users/zhangchangming/Documents/Code/Codex/src/executor/simple_executor.cpp
+
+CMakeFiles/main.dir/src/executor/simple_executor.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/main.dir/src/executor/simple_executor.cpp.i"
+	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/zhangchangming/Documents/Code/Codex/src/executor/simple_executor.cpp > CMakeFiles/main.dir/src/executor/simple_executor.cpp.i
+
+CMakeFiles/main.dir/src/executor/simple_executor.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/main.dir/src/executor/simple_executor.cpp.s"
+	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/zhangchangming/Documents/Code/Codex/src/executor/simple_executor.cpp -o CMakeFiles/main.dir/src/executor/simple_executor.cpp.s
+
+CMakeFiles/main.dir/src/executor/state_manager.cpp.o: CMakeFiles/main.dir/flags.make
+CMakeFiles/main.dir/src/executor/state_manager.cpp.o: /Users/zhangchangming/Documents/Code/Codex/src/executor/state_manager.cpp
+CMakeFiles/main.dir/src/executor/state_manager.cpp.o: CMakeFiles/main.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/zhangchangming/Documents/Code/Codex/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_10) "Building CXX object CMakeFiles/main.dir/src/executor/state_manager.cpp.o"
+	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/main.dir/src/executor/state_manager.cpp.o -MF CMakeFiles/main.dir/src/executor/state_manager.cpp.o.d -o CMakeFiles/main.dir/src/executor/state_manager.cpp.o -c /Users/zhangchangming/Documents/Code/Codex/src/executor/state_manager.cpp
+
+CMakeFiles/main.dir/src/executor/state_manager.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/main.dir/src/executor/state_manager.cpp.i"
+	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/zhangchangming/Documents/Code/Codex/src/executor/state_manager.cpp > CMakeFiles/main.dir/src/executor/state_manager.cpp.i
+
+CMakeFiles/main.dir/src/executor/state_manager.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/main.dir/src/executor/state_manager.cpp.s"
+	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/zhangchangming/Documents/Code/Codex/src/executor/state_manager.cpp -o CMakeFiles/main.dir/src/executor/state_manager.cpp.s
+
+CMakeFiles/main.dir/src/executor/variable_manager.cpp.o: CMakeFiles/main.dir/flags.make
+CMakeFiles/main.dir/src/executor/variable_manager.cpp.o: /Users/zhangchangming/Documents/Code/Codex/src/executor/variable_manager.cpp
+CMakeFiles/main.dir/src/executor/variable_manager.cpp.o: CMakeFiles/main.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/zhangchangming/Documents/Code/Codex/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_11) "Building CXX object CMakeFiles/main.dir/src/executor/variable_manager.cpp.o"
+	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/main.dir/src/executor/variable_manager.cpp.o -MF CMakeFiles/main.dir/src/executor/variable_manager.cpp.o.d -o CMakeFiles/main.dir/src/executor/variable_manager.cpp.o -c /Users/zhangchangming/Documents/Code/Codex/src/executor/variable_manager.cpp
+
+CMakeFiles/main.dir/src/executor/variable_manager.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/main.dir/src/executor/variable_manager.cpp.i"
+	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/zhangchangming/Documents/Code/Codex/src/executor/variable_manager.cpp > CMakeFiles/main.dir/src/executor/variable_manager.cpp.i
+
+CMakeFiles/main.dir/src/executor/variable_manager.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/main.dir/src/executor/variable_manager.cpp.s"
+	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/zhangchangming/Documents/Code/Codex/src/executor/variable_manager.cpp -o CMakeFiles/main.dir/src/executor/variable_manager.cpp.s
+
+CMakeFiles/main.dir/src/input/json_parser.cpp.o: CMakeFiles/main.dir/flags.make
+CMakeFiles/main.dir/src/input/json_parser.cpp.o: /Users/zhangchangming/Documents/Code/Codex/src/input/json_parser.cpp
+CMakeFiles/main.dir/src/input/json_parser.cpp.o: CMakeFiles/main.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/zhangchangming/Documents/Code/Codex/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_12) "Building CXX object CMakeFiles/main.dir/src/input/json_parser.cpp.o"
+	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/main.dir/src/input/json_parser.cpp.o -MF CMakeFiles/main.dir/src/input/json_parser.cpp.o.d -o CMakeFiles/main.dir/src/input/json_parser.cpp.o -c /Users/zhangchangming/Documents/Code/Codex/src/input/json_parser.cpp
+
+CMakeFiles/main.dir/src/input/json_parser.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/main.dir/src/input/json_parser.cpp.i"
+	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/zhangchangming/Documents/Code/Codex/src/input/json_parser.cpp > CMakeFiles/main.dir/src/input/json_parser.cpp.i
+
+CMakeFiles/main.dir/src/input/json_parser.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/main.dir/src/input/json_parser.cpp.s"
+	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/zhangchangming/Documents/Code/Codex/src/input/json_parser.cpp -o CMakeFiles/main.dir/src/input/json_parser.cpp.s
+
+CMakeFiles/main.dir/src/parser/behavior_parser.cpp.o: CMakeFiles/main.dir/flags.make
+CMakeFiles/main.dir/src/parser/behavior_parser.cpp.o: /Users/zhangchangming/Documents/Code/Codex/src/parser/behavior_parser.cpp
+CMakeFiles/main.dir/src/parser/behavior_parser.cpp.o: CMakeFiles/main.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/zhangchangming/Documents/Code/Codex/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_13) "Building CXX object CMakeFiles/main.dir/src/parser/behavior_parser.cpp.o"
+	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/main.dir/src/parser/behavior_parser.cpp.o -MF CMakeFiles/main.dir/src/parser/behavior_parser.cpp.o.d -o CMakeFiles/main.dir/src/parser/behavior_parser.cpp.o -c /Users/zhangchangming/Documents/Code/Codex/src/parser/behavior_parser.cpp
+
+CMakeFiles/main.dir/src/parser/behavior_parser.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/main.dir/src/parser/behavior_parser.cpp.i"
+	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/zhangchangming/Documents/Code/Codex/src/parser/behavior_parser.cpp > CMakeFiles/main.dir/src/parser/behavior_parser.cpp.i
+
+CMakeFiles/main.dir/src/parser/behavior_parser.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/main.dir/src/parser/behavior_parser.cpp.s"
+	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/zhangchangming/Documents/Code/Codex/src/parser/behavior_parser.cpp -o CMakeFiles/main.dir/src/parser/behavior_parser.cpp.s
+
 # Object files for target main
 main_OBJECTS = \
-"CMakeFiles/main.dir/src/main.cpp.o"
+"CMakeFiles/main.dir/src/main.cpp.o" \
+"CMakeFiles/main.dir/src/constraint/evaluator.cpp.o" \
+"CMakeFiles/main.dir/src/coordinator/coordinator.cpp.o" \
+"CMakeFiles/main.dir/src/coordinator/distributed_semaphore.cpp.o" \
+"CMakeFiles/main.dir/src/coordinator/inter_sat_comm.cpp.o" \
+"CMakeFiles/main.dir/src/coordinator/node_registry.cpp.o" \
+"CMakeFiles/main.dir/src/executor/generic_executor.cpp.o" \
+"CMakeFiles/main.dir/src/executor/semaphore_manager.cpp.o" \
+"CMakeFiles/main.dir/src/executor/simple_executor.cpp.o" \
+"CMakeFiles/main.dir/src/executor/state_manager.cpp.o" \
+"CMakeFiles/main.dir/src/executor/variable_manager.cpp.o" \
+"CMakeFiles/main.dir/src/input/json_parser.cpp.o" \
+"CMakeFiles/main.dir/src/parser/behavior_parser.cpp.o"
 
 # External object files for target main
 main_EXTERNAL_OBJECTS =
 
 main: CMakeFiles/main.dir/src/main.cpp.o
+main: CMakeFiles/main.dir/src/constraint/evaluator.cpp.o
+main: CMakeFiles/main.dir/src/coordinator/coordinator.cpp.o
+main: CMakeFiles/main.dir/src/coordinator/distributed_semaphore.cpp.o
+main: CMakeFiles/main.dir/src/coordinator/inter_sat_comm.cpp.o
+main: CMakeFiles/main.dir/src/coordinator/node_registry.cpp.o
+main: CMakeFiles/main.dir/src/executor/generic_executor.cpp.o
+main: CMakeFiles/main.dir/src/executor/semaphore_manager.cpp.o
+main: CMakeFiles/main.dir/src/executor/simple_executor.cpp.o
+main: CMakeFiles/main.dir/src/executor/state_manager.cpp.o
+main: CMakeFiles/main.dir/src/executor/variable_manager.cpp.o
+main: CMakeFiles/main.dir/src/input/json_parser.cpp.o
+main: CMakeFiles/main.dir/src/parser/behavior_parser.cpp.o
 main: CMakeFiles/main.dir/build.make
 main: CMakeFiles/main.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/Users/zhangchangming/Documents/Code/Codex/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Linking CXX executable main"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/Users/zhangchangming/Documents/Code/Codex/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_14) "Linking CXX executable main"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/main.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.

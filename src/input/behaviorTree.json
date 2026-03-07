@@ -1,0 +1,198 @@
+{
+    "library_id": "observation_behaviors",
+    "version": "1.0.0",
+    "description": "观测任务行为树",
+    "behavior_definitions": {
+        "Observation_Mission": {
+            "type": "Sequence",
+            "name": "Observation_Mission",
+            "description": "完整观测任务：姿态调整 -> 拍摄 -> 数据处理",
+            "children": [
+                {
+                    "type": "Condition",
+                    "name": "Check_Prerequisites",
+                    "description": "验证卫星是否已准备好进行观测",
+                    "expression": "battery > 20 && storage_available > 100 && payload_status == 'READY'",
+                    "variables": [
+                        "battery",
+                        "storage_available",
+                        "payload_status"
+                    ]
+                },
+                {
+                    "type": "Condition",
+                    "name": "Check_Time_Window",
+                    "description": "验证当前时间是否在观测窗口内",
+                    "expression": "current_time >= window_start && current_time <= window_end",
+                    "variables": [
+                        "current_time",
+                        "window_start",
+                        "window_end"
+                    ]
+                },
+                {
+                    "type": "Action",
+                    "name": "Acquire_Semaphore",
+                    "description": "如需要则获取共享资源",
+                    "command": "SEMAPHORE_ACQUIRE",
+                    "params": {
+                        "semaphore_id": "${resource_semaphore}",
+                        "timeout_s": 30
+                    },
+                    "optional": true
+                },
+                {
+                    "type": "Action",
+                    "name": "Attitude_Adjustment",
+                    "description": "调整卫星姿态以指向目标",
+                    "command": "ATTITUDE_ADJUST",
+                    "params": {
+                        "target_lat": "${target_lat}",
+                        "target_lon": "${target_lon}",
+                        "mode": "TARGET_POINTING"
+                    },
+                    "timeout_s": "${attitude_adjustment_time_s}"
+                },
+
+                {
+                    "type": "Action",
+                    "name": "Configure_Payload",
+                    "description": "配置相机/传感器以进行观测",
+                    "command": "PAYLOAD_CONFIG",
+                    "params": {
+                        "mode": "OBSERVATION",
+                        "resolution": "${resolution}"
+                    }
+                },
+                {
+                    "type": "Action",
+                    "name": "Execute_Observation",
+                    "description": "拍摄目标图像",
+                    "command": "PAYLOAD_CAPTURE",
+                    "params": {
+                        "target_lat": "${target_lat}",
+                        "target_lon": "${target_lon}",
+                        "duration_s": "${observation_duration_s}"
+                    }
+                },
+                {
+                    "type": "Action",
+                    "name": "Store_Data",
+                    "description": "将拍摄的数据存储到星载存储器",
+                    "command": "DATA_STORE",
+                    "params": {
+                        "task_id": "${task_id}",
+                        "compress": true
+                    }
+                },
+                {
+                    "type": "Action",
+                    "name": "Release_Semaphore",
+                    "description": "释放共享资源",
+                    "command": "SEMAPHORE_RELEASE",
+                    "params": {
+                        "semaphore_id": "${resource_semaphore}"
+                    },
+                    "optional": true
+                },
+                {
+                    "type": "Action",
+                    "name": "Report_Complete",
+                    "description": "发送观测完成事件",
+                    "command": "EMIT_EVENT",
+                    "params": {
+                        "event": "OBSERVATION_COMPLETE",
+                        "task_id": "${task_id}",
+                        "profit": "${profit}"
+                    }
+                }
+            ]
+        }
+    },
+    "command_definitions": {
+        "ATTITUDE_ADJUST": {
+            "description": "调整卫星姿态指向目标",
+            "required_params": [
+                "target_lat",
+                "target_lon",
+                "mode"
+            ],
+            "subsystem": "ATTITUDE_CONTROL"
+        },
+        "PAYLOAD_CONFIG": {
+            "description": "配置有效载荷传感器",
+            "required_params": [
+                "mode"
+            ],
+            "optional_params": [
+                "resolution"
+            ],
+            "subsystem": "PAYLOAD"
+        },
+        "PAYLOAD_CAPTURE": {
+            "description": "拍摄图像",
+            "required_params": [
+                "target_lat",
+                "target_lon"
+            ],
+            "optional_params": [
+                "duration_s"
+            ],
+            "subsystem": "PAYLOAD"
+        },
+        "DATA_STORE": {
+            "description": "将数据存储到星载存储器",
+            "required_params": [
+                "task_id"
+            ],
+            "subsystem": "DATA_HANDLING"
+        },
+        "SEMAPHORE_ACQUIRE": {
+            "description": "获取共享资源信号量",
+            "required_params": [
+                "semaphore_id"
+            ],
+            "optional_params": [
+                "timeout_s"
+            ],
+            "subsystem": "EXECUTOR"
+        },
+        "SEMAPHORE_RELEASE": {
+            "description": "释放共享资源信号量",
+            "required_params": [
+                "semaphore_id"
+            ],
+            "subsystem": "EXECUTOR"
+        },
+        "EMIT_EVENT": {
+            "description": "发送执行事件",
+            "required_params": [
+                "event"
+            ],
+            "subsystem": "EXECUTOR"
+        }
+    },
+    "node_types": {
+        "Sequence": {
+            "description": "按顺序执行子节点，遇到第一个失败即失败"
+        },
+        "Selector": {
+            "description": "按顺序执行子节点，遇到第一个成功即成功"
+        },
+        "Parallel": {
+            "description": "并发执行子节点"
+        },
+        "Action": {
+            "description": "执行一条命令"
+        },
+        "Condition": {
+            "description": "评估表达式，返回成功/失败"
+        },
+        "Decorator": {
+            "description": "修改子节点行为（重试、超时、反转等）"
+        },
+        "SubTree": {
+            "description": "引用另一个行为树"
+        }
+    }
+}

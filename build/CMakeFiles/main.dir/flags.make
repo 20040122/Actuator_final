@@ -4,9 +4,7 @@
 # compile CXX with /usr/bin/clang++
 CXX_DEFINES = 
 
-CXX_INCLUDES = 
+CXX_INCLUDES = -I/Users/zhangchangming/Documents/Code/Codex/src/third_party
 
-CXX_FLAGSarm64 = -g -std=gnu++11 -arch arm64
-
-CXX_FLAGS = -g -std=gnu++11 -arch arm64
+CXX_FLAGS = -g -std=gnu++11
 
