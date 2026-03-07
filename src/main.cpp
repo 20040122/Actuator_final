@@ -3,6 +3,9 @@
 #include <memory>
 #include <csignal>
 #include <atomic>
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 using namespace coordinator;
 

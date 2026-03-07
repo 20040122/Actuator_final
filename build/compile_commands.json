@@ -1,79 +1,79 @@
 [
 {
   "directory": "/Users/zhangchangming/Documents/Code/Codex/build",
-  "command": "/usr/bin/clang++  -I/Users/zhangchangming/Documents/Code/Codex/src/third_party -g -std=gnu++11 -o CMakeFiles/main.dir/src/main.cpp.o -c /Users/zhangchangming/Documents/Code/Codex/src/main.cpp",
+  "command": "/usr/bin/clang++  -I/Users/zhangchangming/Documents/Code/Codex/src/third_party -g -std=gnu++11 -arch arm64 -o CMakeFiles/main.dir/src/main.cpp.o -c /Users/zhangchangming/Documents/Code/Codex/src/main.cpp",
   "file": "/Users/zhangchangming/Documents/Code/Codex/src/main.cpp",
   "output": "CMakeFiles/main.dir/src/main.cpp.o"
 },
 {
   "directory": "/Users/zhangchangming/Documents/Code/Codex/build",
-  "command": "/usr/bin/clang++  -I/Users/zhangchangming/Documents/Code/Codex/src/third_party -g -std=gnu++11 -o CMakeFiles/main.dir/src/constraint/evaluator.cpp.o -c /Users/zhangchangming/Documents/Code/Codex/src/constraint/evaluator.cpp",
+  "command": "/usr/bin/clang++  -I/Users/zhangchangming/Documents/Code/Codex/src/third_party -g -std=gnu++11 -arch arm64 -o CMakeFiles/main.dir/src/constraint/evaluator.cpp.o -c /Users/zhangchangming/Documents/Code/Codex/src/constraint/evaluator.cpp",
   "file": "/Users/zhangchangming/Documents/Code/Codex/src/constraint/evaluator.cpp",
   "output": "CMakeFiles/main.dir/src/constraint/evaluator.cpp.o"
 },
 {
   "directory": "/Users/zhangchangming/Documents/Code/Codex/build",
-  "command": "/usr/bin/clang++  -I/Users/zhangchangming/Documents/Code/Codex/src/third_party -g -std=gnu++11 -o CMakeFiles/main.dir/src/coordinator/coordinator.cpp.o -c /Users/zhangchangming/Documents/Code/Codex/src/coordinator/coordinator.cpp",
+  "command": "/usr/bin/clang++  -I/Users/zhangchangming/Documents/Code/Codex/src/third_party -g -std=gnu++11 -arch arm64 -o CMakeFiles/main.dir/src/coordinator/coordinator.cpp.o -c /Users/zhangchangming/Documents/Code/Codex/src/coordinator/coordinator.cpp",
   "file": "/Users/zhangchangming/Documents/Code/Codex/src/coordinator/coordinator.cpp",
   "output": "CMakeFiles/main.dir/src/coordinator/coordinator.cpp.o"
 },
 {
   "directory": "/Users/zhangchangming/Documents/Code/Codex/build",
-  "command": "/usr/bin/clang++  -I/Users/zhangchangming/Documents/Code/Codex/src/third_party -g -std=gnu++11 -o CMakeFiles/main.dir/src/coordinator/distributed_semaphore.cpp.o -c /Users/zhangchangming/Documents/Code/Codex/src/coordinator/distributed_semaphore.cpp",
+  "command": "/usr/bin/clang++  -I/Users/zhangchangming/Documents/Code/Codex/src/third_party -g -std=gnu++11 -arch arm64 -o CMakeFiles/main.dir/src/coordinator/distributed_semaphore.cpp.o -c /Users/zhangchangming/Documents/Code/Codex/src/coordinator/distributed_semaphore.cpp",
   "file": "/Users/zhangchangming/Documents/Code/Codex/src/coordinator/distributed_semaphore.cpp",
   "output": "CMakeFiles/main.dir/src/coordinator/distributed_semaphore.cpp.o"
 },
 {
   "directory": "/Users/zhangchangming/Documents/Code/Codex/build",
-  "command": "/usr/bin/clang++  -I/Users/zhangchangming/Documents/Code/Codex/src/third_party -g -std=gnu++11 -o CMakeFiles/main.dir/src/coordinator/inter_sat_comm.cpp.o -c /Users/zhangchangming/Documents/Code/Codex/src/coordinator/inter_sat_comm.cpp",
+  "command": "/usr/bin/clang++  -I/Users/zhangchangming/Documents/Code/Codex/src/third_party -g -std=gnu++11 -arch arm64 -o CMakeFiles/main.dir/src/coordinator/inter_sat_comm.cpp.o -c /Users/zhangchangming/Documents/Code/Codex/src/coordinator/inter_sat_comm.cpp",
   "file": "/Users/zhangchangming/Documents/Code/Codex/src/coordinator/inter_sat_comm.cpp",
   "output": "CMakeFiles/main.dir/src/coordinator/inter_sat_comm.cpp.o"
 },
 {
   "directory": "/Users/zhangchangming/Documents/Code/Codex/build",
-  "command": "/usr/bin/clang++  -I/Users/zhangchangming/Documents/Code/Codex/src/third_party -g -std=gnu++11 -o CMakeFiles/main.dir/src/coordinator/node_registry.cpp.o -c /Users/zhangchangming/Documents/Code/Codex/src/coordinator/node_registry.cpp",
+  "command": "/usr/bin/clang++  -I/Users/zhangchangming/Documents/Code/Codex/src/third_party -g -std=gnu++11 -arch arm64 -o CMakeFiles/main.dir/src/coordinator/node_registry.cpp.o -c /Users/zhangchangming/Documents/Code/Codex/src/coordinator/node_registry.cpp",
   "file": "/Users/zhangchangming/Documents/Code/Codex/src/coordinator/node_registry.cpp",
   "output": "CMakeFiles/main.dir/src/coordinator/node_registry.cpp.o"
 },
 {
   "directory": "/Users/zhangchangming/Documents/Code/Codex/build",
-  "command": "/usr/bin/clang++  -I/Users/zhangchangming/Documents/Code/Codex/src/third_party -g -std=gnu++11 -o CMakeFiles/main.dir/src/executor/generic_executor.cpp.o -c /Users/zhangchangming/Documents/Code/Codex/src/executor/generic_executor.cpp",
+  "command": "/usr/bin/clang++  -I/Users/zhangchangming/Documents/Code/Codex/src/third_party -g -std=gnu++11 -arch arm64 -o CMakeFiles/main.dir/src/executor/generic_executor.cpp.o -c /Users/zhangchangming/Documents/Code/Codex/src/executor/generic_executor.cpp",
   "file": "/Users/zhangchangming/Documents/Code/Codex/src/executor/generic_executor.cpp",
   "output": "CMakeFiles/main.dir/src/executor/generic_executor.cpp.o"
 },
 {
   "directory": "/Users/zhangchangming/Documents/Code/Codex/build",
-  "command": "/usr/bin/clang++  -I/Users/zhangchangming/Documents/Code/Codex/src/third_party -g -std=gnu++11 -o CMakeFiles/main.dir/src/executor/semaphore_manager.cpp.o -c /Users/zhangchangming/Documents/Code/Codex/src/executor/semaphore_manager.cpp",
+  "command": "/usr/bin/clang++  -I/Users/zhangchangming/Documents/Code/Codex/src/third_party -g -std=gnu++11 -arch arm64 -o CMakeFiles/main.dir/src/executor/semaphore_manager.cpp.o -c /Users/zhangchangming/Documents/Code/Codex/src/executor/semaphore_manager.cpp",
   "file": "/Users/zhangchangming/Documents/Code/Codex/src/executor/semaphore_manager.cpp",
   "output": "CMakeFiles/main.dir/src/executor/semaphore_manager.cpp.o"
 },
 {
   "directory": "/Users/zhangchangming/Documents/Code/Codex/build",
-  "command": "/usr/bin/clang++  -I/Users/zhangchangming/Documents/Code/Codex/src/third_party -g -std=gnu++11 -o CMakeFiles/main.dir/src/executor/simple_executor.cpp.o -c /Users/zhangchangming/Documents/Code/Codex/src/executor/simple_executor.cpp",
+  "command": "/usr/bin/clang++  -I/Users/zhangchangming/Documents/Code/Codex/src/third_party -g -std=gnu++11 -arch arm64 -o CMakeFiles/main.dir/src/executor/simple_executor.cpp.o -c /Users/zhangchangming/Documents/Code/Codex/src/executor/simple_executor.cpp",
   "file": "/Users/zhangchangming/Documents/Code/Codex/src/executor/simple_executor.cpp",
   "output": "CMakeFiles/main.dir/src/executor/simple_executor.cpp.o"
 },
 {
   "directory": "/Users/zhangchangming/Documents/Code/Codex/build",
-  "command": "/usr/bin/clang++  -I/Users/zhangchangming/Documents/Code/Codex/src/third_party -g -std=gnu++11 -o CMakeFiles/main.dir/src/executor/state_manager.cpp.o -c /Users/zhangchangming/Documents/Code/Codex/src/executor/state_manager.cpp",
+  "command": "/usr/bin/clang++  -I/Users/zhangchangming/Documents/Code/Codex/src/third_party -g -std=gnu++11 -arch arm64 -o CMakeFiles/main.dir/src/executor/state_manager.cpp.o -c /Users/zhangchangming/Documents/Code/Codex/src/executor/state_manager.cpp",
   "file": "/Users/zhangchangming/Documents/Code/Codex/src/executor/state_manager.cpp",
   "output": "CMakeFiles/main.dir/src/executor/state_manager.cpp.o"
 },
 {
   "directory": "/Users/zhangchangming/Documents/Code/Codex/build",
-  "command": "/usr/bin/clang++  -I/Users/zhangchangming/Documents/Code/Codex/src/third_party -g -std=gnu++11 -o CMakeFiles/main.dir/src/executor/variable_manager.cpp.o -c /Users/zhangchangming/Documents/Code/Codex/src/executor/variable_manager.cpp",
+  "command": "/usr/bin/clang++  -I/Users/zhangchangming/Documents/Code/Codex/src/third_party -g -std=gnu++11 -arch arm64 -o CMakeFiles/main.dir/src/executor/variable_manager.cpp.o -c /Users/zhangchangming/Documents/Code/Codex/src/executor/variable_manager.cpp",
   "file": "/Users/zhangchangming/Documents/Code/Codex/src/executor/variable_manager.cpp",
   "output": "CMakeFiles/main.dir/src/executor/variable_manager.cpp.o"
 },
 {
   "directory": "/Users/zhangchangming/Documents/Code/Codex/build",
-  "command": "/usr/bin/clang++  -I/Users/zhangchangming/Documents/Code/Codex/src/third_party -g -std=gnu++11 -o CMakeFiles/main.dir/src/input/json_parser.cpp.o -c /Users/zhangchangming/Documents/Code/Codex/src/input/json_parser.cpp",
+  "command": "/usr/bin/clang++  -I/Users/zhangchangming/Documents/Code/Codex/src/third_party -g -std=gnu++11 -arch arm64 -o CMakeFiles/main.dir/src/input/json_parser.cpp.o -c /Users/zhangchangming/Documents/Code/Codex/src/input/json_parser.cpp",
   "file": "/Users/zhangchangming/Documents/Code/Codex/src/input/json_parser.cpp",
   "output": "CMakeFiles/main.dir/src/input/json_parser.cpp.o"
 },
 {
   "directory": "/Users/zhangchangming/Documents/Code/Codex/build",
-  "command": "/usr/bin/clang++  -I/Users/zhangchangming/Documents/Code/Codex/src/third_party -g -std=gnu++11 -o CMakeFiles/main.dir/src/parser/behavior_parser.cpp.o -c /Users/zhangchangming/Documents/Code/Codex/src/parser/behavior_parser.cpp",
+  "command": "/usr/bin/clang++  -I/Users/zhangchangming/Documents/Code/Codex/src/third_party -g -std=gnu++11 -arch arm64 -o CMakeFiles/main.dir/src/parser/behavior_parser.cpp.o -c /Users/zhangchangming/Documents/Code/Codex/src/parser/behavior_parser.cpp",
   "file": "/Users/zhangchangming/Documents/Code/Codex/src/parser/behavior_parser.cpp",
   "output": "CMakeFiles/main.dir/src/parser/behavior_parser.cpp.o"
 }

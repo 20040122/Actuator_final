@@ -18,3 +18,7 @@ add_executable(main
 target_include_directories(main PRIVATE
     ${CMAKE_SOURCE_DIR}/src/third_party
 )
+
+if (WIN32)
+    target_link_libraries(main PRIVATE ws2_32)
+endif()
