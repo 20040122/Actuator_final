@@ -103,7 +103,7 @@ BehaviorNode BehaviorLibraryParser::parseBehaviorDefinition(
         json library_json;
         file >> library_json;
         file.close();
-        LOG("解析行为库文件: " + library_file);    
+        LOG_DEBUG("解析行为库文件: " + library_file);    
         if (!library_json.contains("behavior_definitions")) {
             LOG_ERROR("行为库文件缺少behavior_definitions字段");
             return root_node;
@@ -118,7 +118,7 @@ BehaviorNode BehaviorLibraryParser::parseBehaviorDefinition(
             std::ostringstream oss;
             oss << "成功加载行为定义: " << behavior_name 
                 << " (类型: " << behaviors[behavior_name].value("type", "Unknown") << ")";
-            LOG(oss.str());
+            LOG_DEBUG(oss.str());
         }    
     } catch (const json::exception& e) {
         std::cerr << "JSON解析错误: " << e.what() << std::endl;

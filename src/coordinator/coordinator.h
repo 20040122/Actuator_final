@@ -9,6 +9,7 @@
 #include <atomic>
 #include <functional>
 #include <cstdint>
+#include <condition_variable>
 
 #include "inter_sat_comm.h"
 #include "message_types.h"
@@ -51,6 +52,10 @@ private:
     bool loadSchedule(const std::string& schedule_file);
     bool registerSatelliteNodes(const ScheduleParser::MultiSatSchedule& schedule);
     bool distributeAllTasks(const ScheduleParser::MultiSatSchedule& schedule);
+    void registerLocalMessageHandlers();
+    void unregisterLocalMessageHandlers();
+    void handleCoordinatorMessage(const Message& message);
+    void handleSatelliteMessage(const std::string& satellite_id, const Message& message);
     void initializeSemaphores();
     void initializeExecutors();
     bool executeTasksForSatellite(const std::string& satellite_id, const std::vector<TaskSegment>& tasks);
@@ -70,6 +75,11 @@ private:
     std::map<std::string, BehaviorNode> behavior_cache_;
     std::mutex executors_mutex_;
     std::mutex console_mutex_;  // 用于控制台输出的互斥锁
+    std::mutex task_status_mutex_;
+    std::condition_variable task_status_cv_;
+    std::map<std::string, bool> satellite_task_results_;
+    std::map<std::string, bool> satellite_task_finished_;
+    std::map<std::string, int> satellite_task_expected_counts_;
     
     std::atomic<bool> running_;
     std::atomic<bool> initialized_;

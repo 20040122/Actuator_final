@@ -1,5 +1,6 @@
 #include "coordinator.h"
 #include "../core/logger.h"
+#include "../third_party/nlohmann/json.hpp"
 #include <iostream>
 #include <chrono>
 #include <thread>
@@ -7,6 +8,146 @@
 #include <sstream>
 
 namespace coordinator {
+
+using json = nlohmann::json;
+
+namespace {
+
+std::string jsonValueToString(const json& value) {
+    if (value.is_string()) {
+        return value.get<std::string>();
+    }
+    if (value.is_number_integer()) {
+        return std::to_string(value.get<int>());
+    }
+    if (value.is_number_float()) {
+        std::ostringstream oss;
+        oss << value.get<double>();
+        return oss.str();
+    }
+    if (value.is_boolean()) {
+        return value.get<bool>() ? "true" : "false";
+    }
+    return value.dump();
+}
+
+bool parseBatchTaskAssignPayload(const std::vector<uint8_t>& payload, BatchTaskAssignMessage& out_msg) {
+    try {
+        const std::string payload_str(payload.begin(), payload.end());
+        json j = json::parse(payload_str);
+        out_msg.message_id = j.value("message_id", "");
+        out_msg.satellite_id = j.value("satellite_id", "");
+        out_msg.node_id = j.value("node_id", "");
+        out_msg.plan_id = j.value("plan_id", "");
+        out_msg.timestamp = j.value("timestamp", static_cast<uint64_t>(0));
+        out_msg.require_ack = j.value("require_ack", false);
+        out_msg.ack_timeout_ms = j.value("ack_timeout_ms", static_cast<uint64_t>(0));
+
+        out_msg.scheduled_tasks.clear();
+        if (j.contains("scheduled_tasks")) {
+            for (const auto& task_j : j["scheduled_tasks"]) {
+                TaskAssignMessage task;
+                task.segment_id = task_j.value("segment_id", "");
+                task.task_id = task_j.value("task_id", "");
+                task.task_name = task_j.value("task_name", "");
+                task.profit = task_j.value("profit", 0);
+                task.behavior_ref = task_j.value("behavior_ref", "");
+
+                if (task_j.contains("window")) {
+                    const auto& win = task_j["window"];
+                    task.window.window_id = win.value("window_id", "");
+                    task.window.window_seq = win.value("window_seq", 0);
+                    task.window.start = win.value("start", "");
+                    task.window.end = win.value("end", "");
+                }
+
+                if (task_j.contains("execution")) {
+                    const auto& exec = task_j["execution"];
+                    task.execution.planned_start = exec.value("planned_start", "");
+                    task.execution.planned_end = exec.value("planned_end", "");
+                    task.execution.duration_s = exec.value("duration_s", 0);
+                }
+
+                if (task_j.contains("behavior_params")) {
+                    for (auto it = task_j["behavior_params"].begin(); it != task_j["behavior_params"].end(); ++it) {
+                        task.behavior_params[it.key()] = jsonValueToString(it.value());
+                    }
+                }
+
+                out_msg.scheduled_tasks.push_back(task);
+            }
+        }
+    } catch (const std::exception&) {
+        return false;
+    }
+    return true;
+}
+
+std::vector<uint8_t> serializeBatchTaskAssignAckPayload(const BatchTaskAssignAck& ack) {
+    json j;
+    j["message_id"] = ack.message_id;
+    j["satellite_id"] = ack.satellite_id;
+    j["node_id"] = ack.node_id;
+    j["timestamp"] = ack.timestamp;
+    j["accepted"] = ack.accepted;
+    j["accepted_task_ids"] = ack.accepted_task_ids;
+    j["rejected_task_ids"] = ack.rejected_task_ids;
+    j["rejection_reasons"] = ack.rejection_reasons;
+    const std::string payload_str = j.dump();
+    return std::vector<uint8_t>(payload_str.begin(), payload_str.end());
+}
+
+bool parseBatchTaskAssignAckPayload(const std::vector<uint8_t>& payload, BatchTaskAssignAck& ack) {
+    try {
+        const std::string payload_str(payload.begin(), payload.end());
+        json j = json::parse(payload_str);
+        ack.message_id = j.value("message_id", "");
+        ack.satellite_id = j.value("satellite_id", "");
+        ack.node_id = j.value("node_id", "");
+        ack.timestamp = j.value("timestamp", static_cast<uint64_t>(0));
+        ack.accepted = j.value("accepted", false);
+        ack.accepted_task_ids.clear();
+        ack.rejected_task_ids.clear();
+        ack.rejection_reasons.clear();
+        if (j.contains("accepted_task_ids")) {
+            for (const auto& id : j["accepted_task_ids"]) {
+                ack.accepted_task_ids.push_back(id.get<std::string>());
+            }
+        }
+        if (j.contains("rejected_task_ids")) {
+            for (const auto& id : j["rejected_task_ids"]) {
+                ack.rejected_task_ids.push_back(id.get<std::string>());
+            }
+        }
+        if (j.contains("rejection_reasons")) {
+            for (auto it = j["rejection_reasons"].begin(); it != j["rejection_reasons"].end(); ++it) {
+                ack.rejection_reasons[it.key()] = jsonValueToString(it.value());
+            }
+        }
+    } catch (const std::exception&) {
+        return false;
+    }
+    return true;
+}
+
+TaskSegment taskAssignToSegment(const TaskAssignMessage& task, const std::string& satellite_id) {
+    TaskSegment segment;
+    segment.segment_id = task.segment_id;
+    segment.task_id = task.task_id;
+    segment.satellite_id = satellite_id;
+    segment.behavior_ref = task.behavior_ref;
+    segment.behavior_params = task.behavior_params;
+    segment.execution.planned_start = task.execution.planned_start;
+    segment.execution.planned_end = task.execution.planned_end;
+    segment.execution.duration_s = task.execution.duration_s;
+    segment.window.window_id = task.window.window_id;
+    segment.window.window_seq = task.window.window_seq;
+    segment.window.start = task.window.start;
+    segment.window.end = task.window.end;
+    return segment;
+}
+
+} // namespace
 
 Coordinator::Coordinator(const CoordinatorConfig& config)
     : config_(config),
@@ -87,6 +228,8 @@ bool Coordinator::initialize(const std::string& global_config_file, const std::s
     std::cout << "[Coordinator] Step 7: 初始化执行器" << std::endl;
     initializeExecutors();
     std::cout << "[Coordinator] ✓ 执行器初始化完成 (" << executors_.size() << " 个执行器)" << std::endl;
+
+    registerLocalMessageHandlers();
     
     std::cout << "\n[Coordinator] 已注册节点摘要:" << std::endl;
     auto node_ids = node_registry_->getAllNodeIds();
@@ -114,6 +257,7 @@ void Coordinator::shutdown() {
     stop();
     
     if (comm_) {
+        unregisterLocalMessageHandlers();
         std::cout << "[Coordinator] 停止通信模块" << std::endl;
         comm_->stop();
         std::cout << "[Coordinator] ✓ 通信模块已停止" << std::endl;
@@ -180,52 +324,180 @@ void Coordinator::run() {
         LOG_ERROR("[Coordinator] ERROR: Failed to start communication module!");
         return;
     }
+
+    running_.store(true);
     
     LOG("\n[Coordinator] Step 8: 执行任务");
-    std::vector<std::thread> worker_threads;
-    std::mutex result_mutex;
-    int total_satellites = 0;
-    int success_satellites = 0;
-    
-    for (const auto& sat_id : schedule_.satellite_ids) {
-        auto it = schedule_.satellite_tasks.find(sat_id);
-        if (it == schedule_.satellite_tasks.end() || it->second.empty()) {
-            continue;
-        }
-        
-        total_satellites++;
-        
-        // 获取任务列表的引用（在创建线程前捕获）
-        const auto& tasks = it->second;
-        
-        // 为每个卫星创建一个线程（值捕获 sat_id，引用捕获 tasks）
-        worker_threads.emplace_back([this, sat_id, &tasks, &success_satellites, &result_mutex]() {
-            bool success = executeTasksForSatellite(sat_id, tasks);
-            if (success) {
-                std::lock_guard<std::mutex> lock(result_mutex);
-                success_satellites++;
+
+    {
+        std::lock_guard<std::mutex> lock(task_status_mutex_);
+        satellite_task_results_.clear();
+        satellite_task_finished_.clear();
+        satellite_task_expected_counts_.clear();
+        for (const auto& sat_id : schedule_.satellite_ids) {
+            auto it = schedule_.satellite_tasks.find(sat_id);
+            if (it == schedule_.satellite_tasks.end() || it->second.empty()) {
+                continue;
             }
-        });
-    }
-    
-    // 等待所有卫星任务完成
-    for (auto& thread : worker_threads) {
-        if (thread.joinable()) {
-            thread.join();
+            satellite_task_results_[sat_id] = false;
+            satellite_task_finished_[sat_id] = false;
+            satellite_task_expected_counts_[sat_id] = static_cast<int>(it->second.size());
         }
     }
-    
+
+    if (!distributeAllTasks(schedule_)) {
+        LOG_ERROR("[Coordinator] ERROR: 任务分发过程中存在失败");
+    }
+
+    std::unique_lock<std::mutex> lock(task_status_mutex_);
+    bool finished = task_status_cv_.wait_for(
+        lock,
+        std::chrono::seconds(60),
+        [this]() {
+            if (satellite_task_finished_.empty()) {
+                return true;
+            }
+            for (const auto& pair : satellite_task_finished_) {
+                if (!pair.second) {
+                    return false;
+                }
+            }
+            return true;
+        }
+    );
+
+    if (!finished) {
+        LOG_ERROR("[Coordinator] WARN: 等待任务ACK超时，未完成的卫星将标记为失败");
+        for (auto& pair : satellite_task_finished_) {
+            if (!pair.second) {
+                pair.second = true;
+                satellite_task_results_[pair.first] = false;
+            }
+        }
+    }
+
+    int total_satellites = static_cast<int>(satellite_task_finished_.size());
+    int success_satellites = 0;
+    for (const auto& pair : satellite_task_results_) {
+        if (pair.second) {
+            success_satellites++;
+        }
+    }
+
+    lock.unlock();
+
     {
         std::ostringstream oss;
         oss << "[Coordinator] ✓ 任务执行完成 (" << success_satellites << "/" << total_satellites << " 卫星)";
         LOG(oss.str());
     }
-    
+
+    running_.store(false);
     LOG("\n[Coordinator] 所有任务完成，退出运行。");
 }
 
 void Coordinator::stop() {
     running_.store(false);
+}
+
+void Coordinator::registerLocalMessageHandlers() {
+    if (!comm_) {
+        return;
+    }
+
+    comm_->registerLocalHandler(config_.coordinator_id, [this](const Message& message) {
+        handleCoordinatorMessage(message);
+    });
+
+    for (const auto& sat_id : schedule_.satellite_ids) {
+        comm_->registerLocalHandler(sat_id, [this, sat_id](const Message& message) {
+            handleSatelliteMessage(sat_id, message);
+        });
+    }
+}
+
+void Coordinator::unregisterLocalMessageHandlers() {
+    if (!comm_) {
+        return;
+    }
+
+    comm_->unregisterLocalHandler(config_.coordinator_id);
+    for (const auto& sat_id : schedule_.satellite_ids) {
+        comm_->unregisterLocalHandler(sat_id);
+    }
+}
+
+void Coordinator::handleCoordinatorMessage(const Message& message) {
+    if (message.header.msg_type != MessageType::BATCH_TASK_ASSIGN_ACK) {
+        return;
+    }
+
+    BatchTaskAssignAck ack;
+    if (!parseBatchTaskAssignAckPayload(message.payload, ack)) {
+        LOG_ERROR("[Coordinator] ERROR: 无法解析 BATCH_TASK_ASSIGN_ACK payload");
+        return;
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(task_status_mutex_);
+        satellite_task_finished_[ack.satellite_id] = true;
+        satellite_task_results_[ack.satellite_id] = ack.accepted;
+    }
+    task_status_cv_.notify_all();
+
+    {
+        std::ostringstream oss;
+        oss << "[Coordinator] 收到ACK: " << ack.satellite_id
+            << " -> " << (ack.accepted ? "SUCCESS" : "FAILED");
+        LOG(oss.str());
+    }
+}
+
+void Coordinator::handleSatelliteMessage(const std::string& satellite_id, const Message& message) {
+    if (message.header.msg_type != MessageType::BATCH_TASK_ASSIGN) {
+        return;
+    }
+
+    BatchTaskAssignMessage batch_msg;
+    BatchTaskAssignAck ack;
+    ack.message_id = "";
+    ack.satellite_id = satellite_id;
+    ack.node_id = satellite_id;
+    ack.timestamp = getCurrentTimeMs();
+    ack.accepted = false;
+
+    if (!parseBatchTaskAssignPayload(message.payload, batch_msg)) {
+        ack.rejection_reasons["payload"] = "invalid batch task payload";
+    } else {
+        ack.message_id = batch_msg.message_id;
+        std::vector<TaskSegment> tasks;
+        tasks.reserve(batch_msg.scheduled_tasks.size());
+        for (const auto& task : batch_msg.scheduled_tasks) {
+            tasks.push_back(taskAssignToSegment(task, satellite_id));
+            ack.accepted_task_ids.push_back(task.task_id);
+        }
+
+        ack.accepted = executeTasksForSatellite(satellite_id, tasks);
+        if (!ack.accepted) {
+            ack.rejected_task_ids = ack.accepted_task_ids;
+            ack.accepted_task_ids.clear();
+            ack.rejection_reasons["execution"] = "one or more tasks failed";
+        }
+    }
+
+    Message ack_message;
+    ack_message.header.magic = MessageHeader::MAGIC_NUMBER;
+    ack_message.header.version = MessageHeader::PROTOCOL_VERSION;
+    ack_message.header.msg_type = MessageType::BATCH_TASK_ASSIGN_ACK;
+    ack_message.header.source_node_id = satellite_id;
+    ack_message.header.dest_node_id = config_.coordinator_id;
+    ack_message.header.priority = Priority::NORMAL;
+    ack_message.header.timestamp_ms = getCurrentTimeMs();
+    ack_message.payload = serializeBatchTaskAssignAckPayload(ack);
+    ack_message.header.payload_size = static_cast<uint32_t>(ack_message.payload.size());
+    ack_message.header.checksum = 0;
+
+    comm_->sendMessage(config_.coordinator_id, ack_message);
 }
 
 bool Coordinator::registerSatelliteNodes(const ScheduleParser::MultiSatSchedule& schedule) {
@@ -502,6 +774,12 @@ bool Coordinator::executeTasksForSatellite(const std::string& satellite_id, cons
             std::ostringstream oss;
             if (result.success) {
                 oss << "[Coordinator]       ✓ 任务执行成功 (耗时: " << result.execution_time_ms << "ms)";
+                if (!result.outputs.empty()) {
+                    oss << "\n[Coordinator]       输出参数:";
+                    for (const auto& out : result.outputs) {
+                        oss << "\n[Coordinator]         " << out.first << " = " << out.second.asString();
+                    }
+                }
                 LOG(oss.str());
                 success_count++;
             } else {

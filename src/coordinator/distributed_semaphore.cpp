@@ -86,6 +86,7 @@ bool DistributedSemaphore::acquire(
     int priority,
     int timeout_s,
     const std::string& task_id,
+    const std::string& caller_id,
     const std::chrono::system_clock::time_point& deadline
 ) {
     std::lock_guard<std::mutex> lock(global_mutex_);
@@ -107,6 +108,7 @@ bool DistributedSemaphore::acquire(
     SemaphoreRequest request;
     request.request_id = generateRequestId();
     request.node_id = local_node_id_;
+    request.caller_id = caller_id.empty() ? local_node_id_ : caller_id;
     request.task_id = task_id;
     request.semaphore_id = semaphore_id;
     request.permits = permits;
@@ -118,7 +120,18 @@ bool DistributedSemaphore::acquire(
 
     if (tryGrantLocal(semaphore, request)) {
         request.status = SemaphoreRequestStatus::GRANTED;
-        LOG("[DistributedSemaphore] Acquired: " + semaphore_id + " (permits=" + std::to_string(permits) + ")");
+        const int available = semaphore->getAvailablePermits();
+        const int allocated = semaphore->getAllocatedPermits();
+        std::ostringstream oss;
+        oss << "[DistributedSemaphore] Acquired: " << semaphore_id
+            << " (requested=" << permits
+            << ", allocated=" << allocated
+            << ", available=" << available << ")"
+            << " by " << request.caller_id;
+        if (!task_id.empty()) {
+            oss << " task=" << task_id;
+        }
+        LOG(oss.str());
         return true;
     }
 
@@ -157,10 +170,12 @@ bool DistributedSemaphore::release(
     int released = 0;
     auto& holders = semaphore->holders;
 
+    const std::string releaser = caller_id.empty() ? local_node_id_ : caller_id;
+
     if (permits == 0) {
         auto remove_it = std::remove_if(holders.begin(), holders.end(),
-            [this, &released](const SemaphoreHolder& holder) {
-                if (holder.node_id == local_node_id_) {
+            [&released, &releaser](const SemaphoreHolder& holder) {
+                if (holder.caller_id == releaser) {
                     released += holder.permits;
                     return true;
                 }
@@ -170,7 +185,7 @@ bool DistributedSemaphore::release(
     } else {
         int to_release = permits;
         for (auto it = holders.begin(); it != holders.end() && to_release > 0;) {
-            if (it->node_id == local_node_id_) {
+            if (it->caller_id == releaser) {
                 int release_amount = std::min(to_release, it->permits);
                 it->permits -= release_amount;
                 to_release -= release_amount;
@@ -189,10 +204,14 @@ bool DistributedSemaphore::release(
 
     if (released > 0) {
         {
+            const int available = semaphore->getAvailablePermits();
+            const int allocated = semaphore->getAllocatedPermits();
             std::ostringstream oss;
             oss << "[DistributedSemaphore] Released: " << semaphore_id 
-                << " (permits=" << released << ")";
-            if (!caller_id.empty()) oss << " by " << caller_id;
+                << " (released=" << released
+                << ", allocated=" << allocated
+                << ", available=" << available << ")"
+                << " by " << releaser;
             LOG(oss.str());
         }
 
@@ -246,6 +265,8 @@ void DistributedSemaphore::sendAcquireRequest(const std::string& semaphore_id, c
     payload["permits"] = request.permits;
     payload["priority"] = request.priority;
     payload["timeout_s"] = request.timeout_s;
+    payload["caller_id"] = request.caller_id;
+    payload["task_id"] = request.task_id;
 
     std::string payload_str = payload.dump();
     msg.payload.assign(payload_str.begin(), payload_str.end());
@@ -296,6 +317,7 @@ bool DistributedSemaphore::tryGrantLocal(std::shared_ptr<LocalSemaphore> semapho
 
     SemaphoreHolder holder;
     holder.node_id = request.node_id;
+    holder.caller_id = request.caller_id;
     holder.task_id = request.task_id;
     holder.permits = request.permits;
     holder.acquired_at = std::chrono::system_clock::now();

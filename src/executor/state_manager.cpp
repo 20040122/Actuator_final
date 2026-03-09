@@ -25,7 +25,7 @@ void CommandStateManager::logTransition(const std::string& node_id,
     oss << "状态转换 [" << node_id << "]: " 
         << state_names[static_cast<int>(from)] << " -> " 
         << state_names[static_cast<int>(to)];
-    LOG(oss.str());
+    LOG_DEBUG(oss.str());
 }
 void CommandStateManager::reset() {
     states_.clear();

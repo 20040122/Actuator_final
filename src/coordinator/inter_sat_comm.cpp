@@ -309,7 +309,11 @@ void InterSatComm::stop() {
         std::lock_guard<std::mutex> lock(nodes_mutex_);
         nodes_.clear();
     }
-    
+    {
+        std::lock_guard<std::mutex> lock(local_handlers_mutex_);
+        local_handlers_.clear();
+    }
+
     send_queue_.clear();
     recv_queue_.clear();
     
@@ -368,6 +372,24 @@ NodeStatus InterSatComm::getNodeStatus(const std::string& node_id) const {
 }
 
 bool InterSatComm::sendMessage(const std::string& dest_node_id, const Message& message) {
+    MessageHandler handler;
+    std::string target_node = dest_node_id.empty() ? message.header.dest_node_id : dest_node_id;
+    if (!target_node.empty()) {
+        std::lock_guard<std::mutex> lock(local_handlers_mutex_);
+        auto it = local_handlers_.find(target_node);
+        if (it != local_handlers_.end()) {
+            handler = it->second;
+        }
+    }
+
+    if (handler) {
+        Message copied = message;
+        std::thread([handler, copied]() {
+            handler(copied);
+        }).detach();
+        return true;
+    }
+
     return send_queue_.push(message);
 }
 
@@ -376,6 +398,19 @@ bool InterSatComm::sendBatchTaskAssign(const std::string& dest_node_id,
     auto payload = MessageSerializer::serializeBatchTaskAssign(batch_tasks);
     Message msg = buildMessage(MessageType::BATCH_TASK_ASSIGN, dest_node_id, payload);
     return sendMessage(dest_node_id, msg);
+}
+
+void InterSatComm::registerLocalHandler(const std::string& node_id, MessageHandler handler) {
+    if (node_id.empty() || !handler) {
+        return;
+    }
+    std::lock_guard<std::mutex> lock(local_handlers_mutex_);
+    local_handlers_[node_id] = handler;
+}
+
+void InterSatComm::unregisterLocalHandler(const std::string& node_id) {
+    std::lock_guard<std::mutex> lock(local_handlers_mutex_);
+    local_handlers_.erase(node_id);
 }
 
 void InterSatComm::acceptThreadFunc() {

@@ -44,6 +44,7 @@ enum class SemaphoreRequestStatus {
 struct SemaphoreRequest {
     std::string request_id;
     std::string node_id;
+    std::string caller_id;
     std::string task_id;
     std::string semaphore_id;
     int permits;
@@ -58,6 +59,7 @@ struct SemaphoreRequest {
 
 struct SemaphoreHolder {
     std::string node_id;
+    std::string caller_id;
     std::string task_id;
     int permits;
     std::chrono::system_clock::time_point acquired_at;
@@ -92,6 +94,7 @@ public:
         int priority = 5,
         int timeout_s = 0,
         const std::string& task_id = "",
+        const std::string& caller_id = "",
         const std::chrono::system_clock::time_point& deadline = std::chrono::system_clock::time_point()
     );
 

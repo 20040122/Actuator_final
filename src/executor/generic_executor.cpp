@@ -6,6 +6,22 @@
 #include <chrono>
 
 namespace executor {
+namespace {
+
+void mergeOutputs(std::map<std::string, VariableValue>& dst,
+                  const std::map<std::string, VariableValue>& src) {
+    for (const auto& kv : src) {
+        dst[kv.first] = kv.second;
+    }
+}
+
+void appendNodeParamsToOutputs(const BehaviorNode& node, ExecutionResult& result) {
+    for (const auto& kv : node.params) {
+        result.outputs[node.name + "." + kv.first] = VariableValue(kv.second);
+    }
+}
+
+} // namespace
 
 GenericExecutor::GenericExecutor(const ExecutorConfig& config)
     : config_(config)
@@ -306,6 +322,8 @@ ExecutionResult GenericExecutor::executeTaskInternal(
                 }
                 break;
             }
+
+            mergeOutputs(result.outputs, node_result.outputs);
         }
         
     } catch (const std::exception& e) {
@@ -407,6 +425,10 @@ ExecutionResult GenericExecutor::executeNode(
         default:
             result = executeCommand(node.command, node.params);
     }
+
+    if (result.success && !node.params.empty()) {
+        appendNodeParamsToOutputs(node, result);
+    }
     
     state_mgr_.updateState(node.name, result.success ? NodeState::SUCCESS : NodeState::FAILED);
     log("DEBUG", "节点执行结果: " + node.name + " -> " + (result.success ? "成功" : "失败"));
@@ -446,14 +468,16 @@ ExecutionResult GenericExecutor::executeCondition(const BehaviorNode& node) {
 
 ExecutionResult GenericExecutor::executeSequence(const BehaviorNode& node,
                                                   std::shared_ptr<ExecutionContext> ctx) {
+    ExecutionResult seq_result = ExecutionResult::Success();
     for (const auto& child : node.children) {
         auto result = executeNode(child, ctx);
         if (!result.success) {
             log("DEBUG", "顺序节点中断: 子节点失败");
             return result;
         }
+        mergeOutputs(seq_result.outputs, result.outputs);
     }
-    return ExecutionResult::Success();
+    return seq_result;
 }
 
 ExecutionResult GenericExecutor::executeSelector(const BehaviorNode& node,
@@ -477,6 +501,7 @@ ExecutionResult GenericExecutor::executeParallel(const BehaviorNode& node,
     
     bool all_success = true;
     std::string first_failed_node;
+    ExecutionResult parallel_result = ExecutionResult::Success();
     
     for (const auto& child : node.children) {
         auto result = executeNode(child, ctx);
@@ -484,10 +509,13 @@ ExecutionResult GenericExecutor::executeParallel(const BehaviorNode& node,
             all_success = false;
             first_failed_node = result.failed_node.empty() ? child.name : result.failed_node;
         }
+        if (result.success) {
+            mergeOutputs(parallel_result.outputs, result.outputs);
+        }
     }
     
     if (all_success) {
-        return ExecutionResult::Success();
+        return parallel_result;
     } else {
         return ExecutionResult::Failure("部分子节点失败", first_failed_node);
     }
@@ -532,7 +560,7 @@ ExecutionResult GenericExecutor::executeBuiltinCommand(
         bool success = false;
         if (distributed_sem_mgr_) {
             std::string task_id = var_mgr_.exists("task_id") ? var_mgr_.get("task_id").asString() : "";
-            success = distributed_sem_mgr_->acquire(sem_id, 1, 5, timeout, task_id);
+            success = distributed_sem_mgr_->acquire(sem_id, 1, 5, timeout, task_id, config_.executor_id);
         } else {
             log("ERROR", "未配置分布式信号量管理器，无法获取信号量: " + sem_id);
         }

@@ -11,6 +11,7 @@
 #include <thread>
 #include <atomic>
 #include <chrono>
+#include <functional>
 
 #include "message_types.h"
 
@@ -117,6 +118,8 @@ public:
 
 class InterSatComm {
 public:
+    using MessageHandler = std::function<void(const Message&)>;
+
     explicit InterSatComm(const CommConfig& config = CommConfig::getDefault());
     ~InterSatComm();
     InterSatComm(const InterSatComm&) = delete;
@@ -135,6 +138,8 @@ public:
     
     bool sendMessage(const std::string& dest_node_id, const Message& message);
     bool sendBatchTaskAssign(const std::string& dest_node_id, const BatchTaskAssignMessage& batch_tasks);
+    void registerLocalHandler(const std::string& node_id, MessageHandler handler);
+    void unregisterLocalHandler(const std::string& node_id);
     
     const CommConfig& getConfig() const { return config_; }
     
@@ -165,6 +170,8 @@ private:
     std::atomic<bool> initialized_;
     std::map<std::string, RemoteNode> nodes_;
     mutable std::mutex nodes_mutex_;
+    std::map<std::string, MessageHandler> local_handlers_;
+    mutable std::mutex local_handlers_mutex_;
     MessageQueue send_queue_;
     MessageQueue recv_queue_;
     std::atomic<uint32_t> sequence_id_;

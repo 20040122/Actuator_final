@@ -25,7 +25,6 @@ int main(int argc, char* argv[]) {
 #ifdef _WIN32
     SetConsoleOutputCP(CP_UTF8);
 #endif
-    LOG("========================================");
     LOG("             多星执行系统                ");
     LOG("========================================");
     
