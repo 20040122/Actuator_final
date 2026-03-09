@@ -421,8 +421,6 @@ void Coordinator::initializeExecutors() {
         auto executor = std::make_shared<executor::GenericExecutor>(exec_config);
         if (executor->initialize()) {
             executor->setDistributedSemaphore(semaphore_mgr_);
-            
-            // 加载卫星的 system_state 到全局变量
             try {
                 executor->getVariableManager().loadFromScheduleConfig(
                     schedule_file_path_, 

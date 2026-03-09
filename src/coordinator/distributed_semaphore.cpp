@@ -92,7 +92,7 @@ bool DistributedSemaphore::acquire(
 
     auto it = semaphores_.find(semaphore_id);
     if (it == semaphores_.end()) {
-        std::cerr << "[DistributedSemaphore] Semaphore not found: " << semaphore_id << std::endl;
+        LOG_ERROR("[DistributedSemaphore] Semaphore not found: " + semaphore_id);
         return false;
     }
 
@@ -100,7 +100,7 @@ bool DistributedSemaphore::acquire(
     std::lock_guard<std::mutex> sem_lock(semaphore->mutex);
 
     if (permits <= 0 || permits > semaphore->config.max_permits) {
-        std::cerr << "[DistributedSemaphore] Invalid permits: " << permits << std::endl;
+        LOG_ERROR("[DistributedSemaphore] Invalid permits: " + std::to_string(permits));
         return false;
     }
 
@@ -131,7 +131,7 @@ bool DistributedSemaphore::acquire(
     pending.expire_time = std::chrono::system_clock::now() + std::chrono::seconds(request.timeout_s);
     pending_requests_[request.request_id] = std::move(pending);
 
-    std::cout << "[DistributedSemaphore] Request queued: " << request.request_id << std::endl;
+    LOG("[DistributedSemaphore] Request queued: " + request.request_id);
     return false;
 }
 
@@ -220,7 +220,7 @@ void DistributedSemaphore::clear() {
     pending_requests_.clear();
     node_semaphore_map_.clear();
 
-    std::cout << "[DistributedSemaphore] Cleared" << std::endl;
+    LOG("[DistributedSemaphore] Cleared");
 }
 
 std::string DistributedSemaphore::generateRequestId() {
@@ -282,8 +282,7 @@ void DistributedSemaphore::processLocalQueue(std::shared_ptr<LocalSemaphore> sem
 
         if (tryGrantLocal(semaphore, request)) {
             semaphore->request_queue.pop();
-            std::cout << "[DistributedSemaphore] Processed queued request: " 
-                      << request.request_id << std::endl;
+            LOG("[DistributedSemaphore] Processed queued request: " + request.request_id);
         } else {
             break;
         }

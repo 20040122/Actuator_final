@@ -1,4 +1,5 @@
 #include "coordinator/coordinator.h"
+#include "core/logger.h"
 #include <iostream>
 #include <memory>
 #include <csignal>
@@ -13,7 +14,7 @@ static std::atomic<bool> g_running(true);
 static std::shared_ptr<Coordinator> g_coordinator;
 
 void signalHandler(int signal) {
-    std::cout << "\n[Main] Received signal " << signal << ", shutting down..." << std::endl;
+    (void)signal;
     g_running.store(false);
     if (g_coordinator) {
         g_coordinator->stop();
@@ -24,9 +25,9 @@ int main(int argc, char* argv[]) {
 #ifdef _WIN32
     SetConsoleOutputCP(CP_UTF8);
 #endif
-    std::cout << "========================================" << std::endl;
-    std::cout << "             多星执行系统                " << std::endl;
-    std::cout << "========================================" << std::endl;
+    LOG("========================================");
+    LOG("             多星执行系统                ");
+    LOG("========================================");
     
     std::signal(SIGINT, signalHandler);
     std::signal(SIGTERM, signalHandler);
@@ -38,14 +39,13 @@ int main(int argc, char* argv[]) {
     g_coordinator = std::make_shared<Coordinator>(config);
     
     if (!g_coordinator->initialize("src/input/global.json", "src/input/schedule.json")) {
-        std::cerr << "\n[Main] ERROR: 协调器初始化失败!" << std::endl;
+        LOG_ERROR("[Main] 协调器初始化失败!");
         return -1;
     }
 
     g_coordinator->run();
     g_coordinator->shutdown();
     
-    std::cout << "\n[Main] 系统成功退出。" << std::endl;
+    LOG("[Main] 系统成功退出。");
     return 0;
 }
-//2026/03/07/22:30

@@ -1,66 +1,11 @@
 {
-    "msg_type": "MultiSatelliteSchedule",
     "plan_id": "observation_plan_001",
     "generated_at": "2026-01-12T00:00:00",
-    "timebase": {
-        "date": "2026-01-12"
-    },
-    "summary": {
-        "total_satellites": 2,
-        "total_tasks": 500,
-        "scheduled_tasks": 6,
-        "unscheduled_tasks": 494,
-        "total_profit": 61
-    },
-    "shared_resources": {
-        "resources": [
-            {
-                "resource_id": "ground_station_beijing",
-                "type": "GROUND_STATION",
-                "name": "Beijing Ground Station",
-                "capacity": 3,
-                "semaphore": {
-                    "max_concurrent": 3,
-                    "current_holders": []
-                }
-            },
-            {
-                "resource_id": "ground_station_xian",
-                "type": "GROUND_STATION",
-                "name": "Xian Ground Station",
-                "capacity": 2,
-                "semaphore": {
-                    "max_concurrent": 2,
-                    "current_holders": []
-                }
-            },
-            {
-                "resource_id": "relay_satellite_link",
-                "type": "RELAY_LINK",
-                "name": "Relay Satellite Link",
-                "capacity": 5,
-                "bandwidth_mbps": 100,
-                "semaphore": {
-                    "max_concurrent": 5,
-                    "current_holders": []
-                }
-            }
-        ]
-    },
     "satellites": [
         {
             "satellite_id": "S1",
             "node_id": "node_s1",
             "name": "Satellite S1",
-            "orbital_params": {
-                "semi_major_axis_km": 7078,
-                "inclination_deg": 97.8,
-                "eccentricity": 0.001,
-                "raan_deg": 120.0,
-                "arg_perigee_deg": 90.0,
-                "mean_anomaly_deg": 0.0
-            },
-            "attitude_adjustment_time_s": 42,
             "status": "ACTIVE",
             "system_state": {
                 "battery_percent": 88,
@@ -72,12 +17,7 @@
                 {
                     "segment_id": "S1#0001",
                     "task_id": "T1",
-                    "task_name": "Beijing City Monitoring",
-                    "profit": 8,
-                    "target": {
-                        "latitude_deg": 39.90,
-                        "longitude_deg": 116.41
-                    },
+                    "behavior_ref": "Observation_Mission",
                     "window": {
                         "window_id": "X_11^1",
                         "window_seq": 1,
@@ -89,7 +29,6 @@
                         "planned_end": "2026-01-12T08:00:40",
                         "duration_s": 40
                     },
-                    "behavior_ref": "Observation_Mission",
                     "behavior_params": {
                         "task_id": "T1",
                         "profit": 8,
@@ -98,44 +37,12 @@
                         "resolution": "HIGH",
                         "observation_duration_s": 40,
                         "resource_semaphore": "sem_ground_station_beijing"
-                    },
-                    "resource_requirements": [
-                        {
-                            "resource_id": "ground_station_beijing",
-                            "usage_type": "DATA_DOWNLINK",
-                            "acquire_at": "execution_end",
-                            "hold_duration_s": 60
-                        }
-                    ],
-                    "constraints": {
-                        "static": [
-                            {
-                                "name": "WINDOW_CONTAINMENT",
-                                "hard": true
-                            },
-                            {
-                                "name": "DEADLINE",
-                                "hard": true,
-                                "deadline": "2026-01-12T15:10:00"
-                            }
-                        ],
-                        "dynamic": [
-                            {
-                                "name": "ABORT_ON_WINDOW_EXIT",
-                                "hard": true
-                            }
-                        ]
                     }
                 },
                 {
                     "segment_id": "S1#0002",
                     "task_id": "T4",
-                    "task_name": "Northeast Agriculture Monitoring",
-                    "profit": 7,
-                    "target": {
-                        "latitude_deg": 45.00,
-                        "longitude_deg": 125.00
-                    },
+                    "behavior_ref": "Observation_Mission",
                     "window": {
                         "window_id": "X_41^1",
                         "window_seq": 1,
@@ -147,7 +54,6 @@
                         "planned_end": "2026-01-12T09:31:00",
                         "duration_s": 60
                     },
-                    "behavior_ref": "Observation_Mission",
                     "behavior_params": {
                         "task_id": "T4",
                         "profit": 7,
@@ -161,12 +67,7 @@
                 {
                     "segment_id": "S1#0003",
                     "task_id": "T500",
-                    "task_name": "Typhoon Disaster Assessment",
-                    "profit": 15,
-                    "target": {
-                        "latitude_deg": 25.00,
-                        "longitude_deg": 125.00
-                    },
+                    "behavior_ref": "Observation_Mission",
                     "window": {
                         "window_id": "X_500,1^2",
                         "window_seq": 2,
@@ -178,7 +79,6 @@
                         "planned_end": "2026-01-12T15:28:50",
                         "duration_s": 50
                     },
-                    "behavior_ref": "Observation_Mission",
                     "behavior_params": {
                         "task_id": "T500",
                         "profit": 15,
@@ -190,22 +90,12 @@
                         "resource_semaphore": "sem_relay_link"
                     }
                 }
-            ],
-            "total_profit": 30
+            ]
         },
         {
             "satellite_id": "S2",
             "node_id": "node_s2",
             "name": "Satellite S2",
-            "orbital_params": {
-                "semi_major_axis_km": 7078,
-                "inclination_deg": 97.8,
-                "eccentricity": 0.001,
-                "raan_deg": 120.5,
-                "arg_perigee_deg": 90.0,
-                "mean_anomaly_deg": 60.0
-            },
-            "attitude_adjustment_time_s": 34,
             "status": "ACTIVE",
             "system_state": {
                 "battery_percent": 92,
@@ -217,12 +107,7 @@
                 {
                     "segment_id": "S2#0001",
                     "task_id": "T2",
-                    "task_name": "Shanghai Port Monitoring",
-                    "profit": 9,
-                    "target": {
-                        "latitude_deg": 31.23,
-                        "longitude_deg": 121.47
-                    },
+                    "behavior_ref": "Observation_Mission",
                     "window": {
                         "window_id": "X_22^1",
                         "window_seq": 1,
@@ -234,7 +119,6 @@
                         "planned_end": "2026-01-12T08:57:35",
                         "duration_s": 35
                     },
-                    "behavior_ref": "Observation_Mission",
                     "behavior_params": {
                         "task_id": "T2",
                         "profit": 9,
@@ -248,12 +132,7 @@
                 {
                     "segment_id": "S2#0002",
                     "task_id": "T5",
-                    "task_name": "Xinjiang Resource Survey",
-                    "profit": 10,
-                    "target": {
-                        "latitude_deg": 42.00,
-                        "longitude_deg": 85.00
-                    },
+                    "behavior_ref": "Observation_Mission",
                     "window": {
                         "window_id": "X_52^1",
                         "window_seq": 1,
@@ -265,7 +144,6 @@
                         "planned_end": "2026-01-12T10:47:55",
                         "duration_s": 55
                     },
-                    "behavior_ref": "Observation_Mission",
                     "behavior_params": {
                         "task_id": "T5",
                         "profit": 10,
@@ -279,12 +157,7 @@
                 {
                     "segment_id": "S2#0003",
                     "task_id": "T9",
-                    "task_name": "South China Sea Island Monitoring",
-                    "profit": 12,
-                    "target": {
-                        "latitude_deg": 15.00,
-                        "longitude_deg": 115.00
-                    },
+                    "behavior_ref": "Observation_Mission",
                     "window": {
                         "window_id": "X_92^2",
                         "window_seq": 2,
@@ -296,7 +169,6 @@
                         "planned_end": "2026-01-12T15:15:40",
                         "duration_s": 40
                     },
-                    "behavior_ref": "Observation_Mission",
                     "behavior_params": {
                         "task_id": "T9",
                         "profit": 12,
@@ -307,42 +179,7 @@
                         "resource_semaphore": "sem_relay_link"
                     }
                 }
-            ],
-            "total_profit": 31
+            ]
         }
-    ],
-    "unscheduled_tasks": [
-        {
-            "task_id": "T7",
-            "task_name": "Central City Monitoring",
-            "reason": "NO_FEASIBLE_WINDOW",
-            "potential_satellites": [
-                "S1",
-                "S2"
-            ],
-            "conflict_info": "Time window conflicts with scheduled tasks"
-        }
-    ],
-    "sync_points": [
-        {
-            "sync_id": "daily_status_sync",
-            "type": "TIME_BARRIER",
-            "description": "Daily status synchronization point",
-            "participants": [
-                "S1",
-                "S2"
-            ],
-            "anchor_time": "2026-01-12T12:00:00",
-            "window_s": 60,
-            "timeout_s": 300,
-            "policy": {
-                "late_arrival": "WAIT_UNTIL_TIMEOUT",
-                "timeout": "PROCEED_WITH_WARNING"
-            }
-        }
-    ],
-    "integrity": {
-        "input_digest": "sha256:abc123...",
-        "schedule_digest": "sha256:def456..."
-    }
+    ]
 }

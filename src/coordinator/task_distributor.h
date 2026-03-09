@@ -3,7 +3,7 @@
 
 #include "inter_sat_comm.h"
 #include "node_registry.h"
-#include "../input/json_parser.h"
+#include "../parser/json_parser.h"
 #include <string>
 #include <sstream>
 #include <iomanip>

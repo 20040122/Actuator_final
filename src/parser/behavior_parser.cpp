@@ -20,33 +20,29 @@ static std::string replaceVariables(const std::string& text, const std::map<std:
     }
     return result;
 }
-static void expandNode(
-    const BehaviorNode& node,
-    const std::map<std::string, std::string>& params,
-    std::vector<BehaviorNode>& result) {
+static BehaviorNode expandNode(const BehaviorNode& node,
+                               const std::map<std::string, std::string>& params) {
     BehaviorNode expanded_node = node;
-    for (std::map<std::string, std::string>::iterator it = expanded_node.params.begin(); 
+
+    for (std::map<std::string, std::string>::iterator it = expanded_node.params.begin();
          it != expanded_node.params.end(); ++it) {
         it->second = replaceVariables(it->second, params);
     }
-    if (node.type == NodeType::SEQUENCE || 
-        node.type == NodeType::SELECTOR || 
-        node.type == NodeType::PARALLEL) {
-        expanded_node.children.clear();
-        result.push_back(expanded_node);
-        for (size_t i = 0; i < node.children.size(); ++i) {
-            expandNode(node.children[i], params, result);
-        }
-    } 
-    else {
-        result.push_back(expanded_node);
+
+    expanded_node.children.clear();
+    expanded_node.children.reserve(node.children.size());
+    for (size_t i = 0; i < node.children.size(); ++i) {
+        expanded_node.children.push_back(expandNode(node.children[i], params));
     }
+
+    return expanded_node;
 }
 std::vector<BehaviorNode> BehaviorTreeParser::instantiate(
     const BehaviorNode& definition,
     const std::map<std::string, std::string>& params) {
     std::vector<BehaviorNode> nodes;
-    expandNode(definition, params, nodes);
+    nodes.reserve(1);
+    nodes.push_back(expandNode(definition, params));
     return nodes;
 }
 void BehaviorTreeParser::substituteVariables(

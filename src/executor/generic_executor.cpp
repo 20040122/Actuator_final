@@ -12,8 +12,7 @@ GenericExecutor::GenericExecutor(const ExecutorConfig& config)
     , running_(false)
     , var_mgr_()
     , evaluator_(var_mgr_)
-    , state_mgr_()
-    , sem_mgr_() {
+    , state_mgr_() {
 }
 
 GenericExecutor::~GenericExecutor() {
@@ -199,29 +198,32 @@ void GenericExecutor::setDistributedSemaphore(std::shared_ptr<coordinator::Distr
 }
 
 void GenericExecutor::printVariableStatus() const {
-    std::cout << "\n========== 变量状态 ==========" << std::endl;
-    
+    std::ostringstream oss;
+    oss << "========== 变量状态 ==========\n";
+
     auto global_vars = var_mgr_.getAllVariables(Scope::GLOBAL);
-    std::cout << "\n[全局变量]" << std::endl;
+    oss << "[全局变量]\n";
     for (const auto& pair : global_vars) {
-        std::cout << "  " << pair.first << " = " << pair.second.asString() << std::endl;
+        oss << "  " << pair.first << " = " << pair.second.asString() << "\n";
     }
-    
+
     auto local_vars = var_mgr_.getAllVariables(Scope::LOCAL);
     if (!local_vars.empty()) {
-        std::cout << "\n[局部变量]" << std::endl;
+        oss << "[局部变量]\n";
         for (const auto& pair : local_vars) {
-            std::cout << "  " << pair.first << " = " << pair.second.asString() << std::endl;
+            oss << "  " << pair.first << " = " << pair.second.asString() << "\n";
         }
     }
-    
+
     auto inter_vars = var_mgr_.getAllVariables(Scope::INTERMEDIATE);
     if (!inter_vars.empty()) {
-        std::cout << "\n[中间变量]" << std::endl;
+        oss << "[中间变量]\n";
         for (const auto& pair : inter_vars) {
-            std::cout << "  " << pair.first << " = " << pair.second.asString() << std::endl;
+            oss << "  " << pair.first << " = " << pair.second.asString() << "\n";
         }
     }
+
+    LOG(oss.str());
 }
 
 void GenericExecutor::workerLoop() {
@@ -532,7 +534,7 @@ ExecutionResult GenericExecutor::executeBuiltinCommand(
             std::string task_id = var_mgr_.exists("task_id") ? var_mgr_.get("task_id").asString() : "";
             success = distributed_sem_mgr_->acquire(sem_id, 1, 5, timeout, task_id);
         } else {
-            success = sem_mgr_.acquire(sem_id, timeout);
+            log("ERROR", "未配置分布式信号量管理器，无法获取信号量: " + sem_id);
         }
         
         if (success) {
@@ -551,7 +553,7 @@ ExecutionResult GenericExecutor::executeBuiltinCommand(
         if (distributed_sem_mgr_) {
             distributed_sem_mgr_->release(sem_id, 0, config_.executor_id);
         } else {
-            sem_mgr_.release(sem_id);
+            log("ERROR", "未配置分布式信号量管理器，无法释放信号量: " + sem_id);
         }
         return ExecutionResult::Success("信号量已释放: " + sem_id);
     }
@@ -595,7 +597,11 @@ void GenericExecutor::log(const std::string& level, const std::string& message) 
         return;
     }
     std::ostringstream oss;
-    oss << "[" << config_.executor_id << "][" << level << "] " << message;
+    oss << "[" << config_.executor_id << "]";
+    if (level != "INFO") {
+        oss << "[" << level << "]";
+    }
+    oss << " " << message;
     LOG(oss.str());
 }
 

@@ -22,20 +22,14 @@ struct SatelliteInfo {
 
 class ScheduleParser {
 public:
-    std::vector<TaskSegment> parseSatelliteTasks(
-        const std::string& schedule_file,
-        const std::string& satellite_id
-    );
-    // Structure to hold multi-satellite schedule data
     struct MultiSatSchedule {
         std::string plan_id;
         std::string schedule_id;
-        std::map<std::string, std::vector<TaskSegment>> satellite_tasks;  
+        std::map<std::string, std::vector<TaskSegment>> satellite_tasks;
         std::vector<std::string> satellite_ids;
-        std::vector<SatelliteInfo> satellites;  
+        std::vector<SatelliteInfo> satellites;
     };
     MultiSatSchedule parseAllSatellites(const std::string& schedule_file);
-    std::vector<SatelliteInfo> parseSatelliteNodes(const std::string& schedule_file);
 };
 class BehaviorLibraryParser {
 public:

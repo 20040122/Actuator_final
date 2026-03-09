@@ -20,7 +20,6 @@
 #include "../constraint/evaluator.h"
 #include "state_manager.h"
 #include "variable_manager.h"
-#include "semaphore_manager.h"
 
 namespace coordinator {
     class DistributedSemaphore;
@@ -144,7 +143,6 @@ public:
     VariableManager& getVariableManager() { return var_mgr_; }
     const VariableManager& getVariableManager() const { return var_mgr_; }
     ConstraintEvaluator& getConstraintEvaluator() { return evaluator_; }
-    SemaphoreManager& getSemaphoreManager() { return sem_mgr_; }
     CommandStateManager& getStateManager() { return state_mgr_; }
     
     void setDistributedSemaphore(std::shared_ptr<coordinator::DistributedSemaphore> sem_mgr);
@@ -162,7 +160,6 @@ private:
     VariableManager var_mgr_;
     ConstraintEvaluator evaluator_;
     CommandStateManager state_mgr_;
-    SemaphoreManager sem_mgr_;
     std::shared_ptr<coordinator::DistributedSemaphore> distributed_sem_mgr_;
     
     std::unordered_map<std::string, std::shared_ptr<ICommandHandler>> handlers_;

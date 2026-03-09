@@ -14,7 +14,7 @@
 #include "message_types.h"
 #include "distributed_semaphore.h"
 #include "node_registry.h"
-#include "../input/json_parser.h"
+#include "../parser/json_parser.h"
 #include "../executor/generic_executor.h"
 #include "../parser/behavior_parser.h"
 

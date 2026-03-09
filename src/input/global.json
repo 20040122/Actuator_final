@@ -1,15 +1,6 @@
 {
-    "msg_type": "GlobalConfig",
     "plan_id": "observation_plan_001",
-    "version": "1.0.0",
-    "system_defaults": {
-        "description": "Default system state values for satellites",
-        "battery_percent": 85,
-        "storage_available_mb": 500,
-        "payload_status": "READY"
-    },
     "multi_node_config": {
-        "description": "Multi-node execution configuration",
         "total_nodes": 128,
         "active_nodes": [
             "S1",
@@ -22,7 +13,6 @@
         }
     },
     "shared_resources": {
-        "description": "Shared resource pool for multi-satellite competitive access",
         "semaphores": [
             {
                 "semaphore_id": "sem_ground_station_beijing",
@@ -49,7 +39,6 @@
                 "resource_type": "RELAY_SATELLITE",
                 "max_permits": 5,
                 "available_permits": 5,
-                "bandwidth_limit_mbps": 100,
                 "queue_policy": "PRIORITY",
                 "timeout_s": 120
             },
@@ -59,13 +48,11 @@
                 "resource_type": "OBSERVATION_TARGET",
                 "max_permits": 1,
                 "available_permits": 1,
-                "description": "Prevent multiple satellites from observing the same target simultaneously",
                 "queue_policy": "PRIORITY"
             }
         ]
     },
     "sync_points": {
-        "description": "Multi-satellite synchronization point configuration",
         "barriers": [
             {
                 "sync_id": "morning_sync",
@@ -76,12 +63,7 @@
                 ],
                 "anchor_time": "01-12T08:00:00+08:00",
                 "window_s": 30,
-                "timeout_s": 120,
-                "policy": {
-                    "late_arrival": "WAIT_UNTIL_TIMEOUT",
-                    "timeout": "PROCEED_WITH_WARNING",
-                    "missing_node": "EXCLUDE_AND_CONTINUE"
-                }
+                "timeout_s": 120
             },
             {
                 "sync_id": "noon_checkpoint",
@@ -91,44 +73,12 @@
                     "S2",
                     "S128"
                 ],
-                "anchor_time": "01-12T12:00:00+08:00",
-                "required_status": [
-                    "HEALTHY",
-                    "DEGRADED"
-                ],
                 "timeout_s": 180
             }
         ]
     },
     "resource_allocation_policy": {
-        "conflict_resolution": "PRIORITY_BASED",
-        "priority_levels": [
-            {
-                "level": 1,
-                "name": "EMERGENCY",
-                "preemptive": true
-            },
-            {
-                "level": 2,
-                "name": "URGENT",
-                "preemptive": false
-            },
-            {
-                "level": 3,
-                "name": "NORMAL",
-                "preemptive": false
-            },
-            {
-                "level": 4,
-                "name": "LOW",
-                "preemptive": false
-            }
-        ],
         "deadlock_detection": true,
         "deadlock_resolution": "ABORT_LOWER_PRIORITY"
-    },
-    "integrity": {
-        "config_digest": "sha256:config123...",
-        "created_at": "01-12T00:00:00+08:00"
     }
 }

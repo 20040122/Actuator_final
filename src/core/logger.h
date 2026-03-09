@@ -5,14 +5,16 @@
 #include <mutex>
 #include <iostream>
 #include <sstream>
+#include <vector>
 
 namespace core {
 
 class Logger {
 public:
     static Logger& getInstance() {
-        static Logger instance;
-        return instance;
+        // Intentionally leaked to avoid static-destruction-order issues.
+        static Logger* instance = new Logger();
+        return *instance;
     }
 
     Logger(const Logger&) = delete;
@@ -25,7 +27,7 @@ public:
 
     void log(const std::string& prefix, const std::string& message) {
         std::lock_guard<std::mutex> lock(mutex_);
-        std::cout << prefix << message << std::endl;
+        std::cout << prefix + message << std::endl;
     }
 
     void logError(const std::string& message) {
@@ -35,7 +37,7 @@ public:
 
     void logError(const std::string& prefix, const std::string& message) {
         std::lock_guard<std::mutex> lock(mutex_);
-        std::cerr << prefix << message << std::endl;
+        std::cerr << prefix + message << std::endl;
     }
 
     template<typename... Args>

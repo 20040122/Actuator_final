@@ -1,5 +1,6 @@
 #include "inter_sat_comm.h"
 #include "../third_party/nlohmann/json.hpp"
+#include "../core/logger.h"
 #include <iostream>
 #include <sstream>
 #include <cstring>
@@ -272,21 +273,21 @@ void InterSatComm::stop() {
         return;
     }
     
-    std::cout << "[InterSatComm] Stopping communication module..." << std::endl;
+    LOG("[InterSatComm] Stopping communication module...");
     
     running_.store(false);
     
-    std::cout << "[InterSatComm] Closing listen socket..." << std::endl;
+    LOG("[InterSatComm] Closing listen socket...");
     if (listen_socket_ != INVALID_SOCKET_VALUE) {
         closesocket(listen_socket_);
         listen_socket_ = INVALID_SOCKET_VALUE;
     }
     
-    std::cout << "[InterSatComm] Clearing message queues..." << std::endl;
+    LOG("[InterSatComm] Clearing message queues...");
     send_queue_.clear();
     recv_queue_.clear();
     
-    std::cout << "[InterSatComm] Waiting for threads to finish..." << std::endl;
+    LOG("[InterSatComm] Waiting for threads to finish...");
     if (accept_thread_ && accept_thread_->joinable()) {
         accept_thread_->join();
     }
@@ -300,7 +301,7 @@ void InterSatComm::stop() {
         heartbeat_thread_->join();
     }
     
-    std::cout << "[InterSatComm] All threads stopped." << std::endl;
+    LOG("[InterSatComm] All threads stopped.");
     
     cleanupSocket();
     
@@ -496,8 +497,7 @@ uint64_t InterSatComm::getCurrentTimeMs() const {
 bool InterSatComm::initializeSocket() {
     listen_socket_ = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (listen_socket_ == INVALID_SOCKET_VALUE) {
-        std::cerr << "[InterSatComm] socket() failed, errno=" << errno
-                  << " (" << std::strerror(errno) << ")" << std::endl;
+        LOG_ERROR("[InterSatComm] socket() failed, errno=" + std::to_string(errno) + " (" + std::string(std::strerror(errno)) + ")");
         return false;
     }
     
@@ -525,22 +525,19 @@ bool InterSatComm::bindSocket() {
     } else {
         in_addr bind_addr;
         if (inet_pton(AF_INET, config_.bind_address.c_str(), &bind_addr) != 1) {
-            std::cerr << "[InterSatComm] invalid bind address: " << config_.bind_address << std::endl;
+            LOG_ERROR("[InterSatComm] invalid bind address: " + config_.bind_address);
             return false;
         }
         addr.sin_addr = bind_addr;
     }
     
     if (bind(listen_socket_, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) == SOCKET_ERROR) {
-        std::cerr << "[InterSatComm] bind() failed on "
-                  << config_.bind_address << ":" << config_.bind_port
-                  << ", errno=" << errno << " (" << std::strerror(errno) << ")" << std::endl;
+        LOG_ERROR("[InterSatComm] bind() failed on " + config_.bind_address + ":" + std::to_string(config_.bind_port) + ", errno=" + std::to_string(errno) + " (" + std::string(std::strerror(errno)) + ")");
         return false;
     }
     
     if (listen(listen_socket_, SOMAXCONN) == SOCKET_ERROR) {
-        std::cerr << "[InterSatComm] listen() failed, errno=" << errno
-                  << " (" << std::strerror(errno) << ")" << std::endl;
+        LOG_ERROR("[InterSatComm] listen() failed, errno=" + std::to_string(errno) + " (" + std::string(std::strerror(errno)) + ")");
         return false;
     }
     
