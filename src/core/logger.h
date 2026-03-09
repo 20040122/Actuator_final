@@ -14,6 +14,10 @@
 #include <sstream>
 #include <vector>
 
+// Windows headers define ERROR as a numeric macro; suppress it for this entire header.
+#pragma push_macro("ERROR")
+#undef ERROR
+
 namespace core {
 
 enum class LogLevel {
@@ -172,5 +176,7 @@ private:
 #define LOG_LOCK() std::lock_guard<std::mutex> _log_lock_(core::Logger::getInstance().getMutex())
 
 } // namespace core
+
+#pragma pop_macro("ERROR")
 
 #endif 
