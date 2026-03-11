@@ -180,6 +180,95 @@
                     }
                 }
             ]
+        },
+        {
+            "satellite_id": "S3",
+            "node_id": "node_s3",
+            "name": "Satellite S3",
+            "status": "ACTIVE",
+            "system_state": {
+                "battery_percent": 90,
+                "storage_available_mb": 700,
+                "payload_status": "READY",
+                "thermal_status": "NORMAL"
+            },
+            "scheduled_tasks": [
+                {
+                    "segment_id": "S3#0001",
+                    "task_id": "T3",
+                    "behavior_ref": "Observation_Mission",
+                    "window": {
+                        "window_id": "X_33^1",
+                        "window_seq": 1,
+                        "start": "2026-01-12T09:12:00",
+                        "end": "2026-01-12T09:25:00"
+                    },
+                    "execution": {
+                        "planned_start": "2026-01-12T09:12:00",
+                        "planned_end": "2026-01-12T09:12:45",
+                        "duration_s": 45
+                    },
+                    "behavior_params": {
+                        "task_id": "T3",
+                        "profit": 11,
+                        "target_lat": 34.34,
+                        "target_lon": 108.94,
+                        "resolution": "HIGH",
+                        "observation_duration_s": 45,
+                        "resource_semaphore": "sem_ground_station_beijing"
+                    }
+                },
+                {
+                    "segment_id": "S3#0002",
+                    "task_id": "T6",
+                    "behavior_ref": "Observation_Mission",
+                    "window": {
+                        "window_id": "X_62^1",
+                        "window_seq": 1,
+                        "start": "2026-01-12T11:05:00",
+                        "end": "2026-01-12T11:20:00"
+                    },
+                    "execution": {
+                        "planned_start": "2026-01-12T11:05:00",
+                        "planned_end": "2026-01-12T11:05:50",
+                        "duration_s": 50
+                    },
+                    "behavior_params": {
+                        "task_id": "T6",
+                        "profit": 9,
+                        "target_lat": 23.13,
+                        "target_lon": 113.27,
+                        "resolution": "MEDIUM",
+                        "observation_duration_s": 50,
+                        "resource_semaphore": "sem_ground_station_xian"
+                    }
+                },
+                {
+                    "segment_id": "S3#0003",
+                    "task_id": "T10",
+                    "behavior_ref": "Observation_Mission",
+                    "window": {
+                        "window_id": "X_102^2",
+                        "window_seq": 2,
+                        "start": "2026-01-12T15:32:00",
+                        "end": "2026-01-12T15:45:00"
+                    },
+                    "execution": {
+                        "planned_start": "2026-01-12T15:32:00",
+                        "planned_end": "2026-01-12T15:32:55",
+                        "duration_s": 55
+                    },
+                    "behavior_params": {
+                        "task_id": "T10",
+                        "profit": 13,
+                        "target_lat": 30.57,
+                        "target_lon": 104.06,
+                        "resolution": "HIGH",
+                        "observation_duration_s": 55,
+                        "resource_semaphore": "sem_relay_link"
+                    }
+                }
+            ]
         }
     ]
 }

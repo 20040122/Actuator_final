@@ -56,7 +56,7 @@ public:
     bool initialize();
     void shutdown();
     
-    bool registerNode(const NodeRegisterMessage& register_msg, std::string& node_id, uint64_t& session_token);
+    bool registerNode(const NodeRegisterMessage& register_msg, std::string& node_id);
     bool unregisterNode(const std::string& node_id, const std::string& reason = "");
     
     bool hasNode(const std::string& node_id) const;

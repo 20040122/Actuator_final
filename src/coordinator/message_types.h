@@ -120,7 +120,6 @@ struct NodeRegisterAck {
     bool            success;            
     std::string     assigned_node_id;   
     std::string     coordinator_id;     
-    uint64_t        session_token;      
     uint32_t        heartbeat_interval_ms;  
     std::string     error_message;     
 };

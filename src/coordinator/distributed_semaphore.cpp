@@ -31,7 +31,8 @@ int DistributedSemaphore::LocalSemaphore::getAvailablePermits() const {
 
 DistributedSemaphore::DistributedSemaphore() 
     : running_(false), 
-      request_counter_(0) {
+      request_counter_(0),
+      grant_token_counter_(0) {
 }
 
 DistributedSemaphore::~DistributedSemaphore() {
@@ -86,7 +87,9 @@ bool DistributedSemaphore::acquire(
     int priority,
     int timeout_s,
     const std::string& task_id,
-    const std::string& caller_id,
+    const std::string& owner_id,
+    uint64_t* out_grant_token,
+    std::string* out_request_id,
     const std::chrono::system_clock::time_point& deadline
 ) {
     std::lock_guard<std::mutex> lock(global_mutex_);
@@ -108,7 +111,7 @@ bool DistributedSemaphore::acquire(
     SemaphoreRequest request;
     request.request_id = generateRequestId();
     request.node_id = local_node_id_;
-    request.caller_id = caller_id.empty() ? local_node_id_ : caller_id;
+    request.owner_id = owner_id.empty() ? local_node_id_ : owner_id;
     request.task_id = task_id;
     request.semaphore_id = semaphore_id;
     request.permits = permits;
@@ -118,16 +121,26 @@ bool DistributedSemaphore::acquire(
     request.timeout_s = (timeout_s == 0) ? semaphore->config.default_timeout_s : timeout_s;
     request.status = SemaphoreRequestStatus::PENDING;
 
-    if (tryGrantLocal(semaphore, request)) {
+    if (out_request_id) {
+        *out_request_id = request.request_id;
+    }
+
+    uint64_t grant_token = 0;
+    if (tryGrantLocal(semaphore, request, &grant_token)) {
         request.status = SemaphoreRequestStatus::GRANTED;
+        if (out_grant_token) {
+            *out_grant_token = grant_token;
+        }
         const int available = semaphore->getAvailablePermits();
         const int allocated = semaphore->getAllocatedPermits();
         std::ostringstream oss;
         oss << "[DistributedSemaphore] Acquired: " << semaphore_id
+            << " request_id=" << request.request_id
+            << " grant_token=" << grant_token
             << " (requested=" << permits
             << ", allocated=" << allocated
             << ", available=" << available << ")"
-            << " by " << request.caller_id;
+            << " by " << request.owner_id;
         if (!task_id.empty()) {
             oss << " task=" << task_id;
         }
@@ -145,21 +158,24 @@ bool DistributedSemaphore::acquire(
     pending_requests_[request.request_id] = std::move(pending);
 
     LOG("[DistributedSemaphore] Request queued: " + request.request_id);
+    if (out_grant_token) {
+        *out_grant_token = 0;
+    }
     return false;
 }
 
 bool DistributedSemaphore::release(
     const std::string& semaphore_id,
     int permits,
-    const std::string& caller_id
+    const std::string& owner_id
 ) {
-    std::lock_guard<std::mutex> lock(global_mutex_);
+    std::unique_lock<std::mutex> lock(global_mutex_);
 
     auto it = semaphores_.find(semaphore_id);
     if (it == semaphores_.end()) {
         std::ostringstream oss;
         oss << "[DistributedSemaphore] Semaphore not found: " << semaphore_id;
-        if (!caller_id.empty()) oss << " (caller: " << caller_id << ")";
+        if (!owner_id.empty()) oss << " (owner: " << owner_id << ")";
         LOG_ERROR(oss.str());
         return false;
     }
@@ -167,63 +183,180 @@ bool DistributedSemaphore::release(
     auto semaphore = it->second;
     std::lock_guard<std::mutex> sem_lock(semaphore->mutex);
 
-    int released = 0;
+    const std::string owner = owner_id.empty() ? local_node_id_ : owner_id;
+    std::vector<uint64_t> owner_tokens;
+    for (const auto& holder : semaphore->holders) {
+        if (holder.owner_id == owner) {
+            owner_tokens.push_back(holder.grant_token);
+        }
+    }
+
+    if (owner_tokens.empty()) {
+        LOG_ERROR("[DistributedSemaphore] Release denied: no active grant for owner " + owner);
+        return false;
+    }
+
+    if (owner_tokens.size() > 1) {
+        LOG_ERROR("[DistributedSemaphore] Release denied: multiple grants found for owner " + owner + ", use releaseByGrantToken/releaseByRequestId");
+        return false;
+    }
+
+    const uint64_t target_token = owner_tokens.front();
+    lock.unlock();
+    return releaseByGrantToken(semaphore_id, target_token, permits, owner);
+}
+
+bool DistributedSemaphore::releaseByGrantToken(
+    const std::string& semaphore_id,
+    uint64_t grant_token,
+    int permits,
+    const std::string& owner_id
+) {
+    std::lock_guard<std::mutex> lock(global_mutex_);
+
+    auto sem_it = semaphores_.find(semaphore_id);
+    if (sem_it == semaphores_.end()) {
+        LOG_ERROR("[DistributedSemaphore] Semaphore not found: " + semaphore_id);
+        return false;
+    }
+
+    auto semaphore = sem_it->second;
+    std::lock_guard<std::mutex> sem_lock(semaphore->mutex);
+
     auto& holders = semaphore->holders;
+    auto holder_it = std::find_if(holders.begin(), holders.end(),
+        [grant_token](const SemaphoreHolder& holder) {
+            return holder.grant_token == grant_token;
+        });
 
-    const std::string releaser = caller_id.empty() ? local_node_id_ : caller_id;
+    if (holder_it == holders.end()) {
+        LOG_ERROR("[DistributedSemaphore] Release denied: grant token not found: " + std::to_string(grant_token));
+        return false;
+    }
 
-    if (permits == 0) {
-        auto remove_it = std::remove_if(holders.begin(), holders.end(),
-            [&released, &releaser](const SemaphoreHolder& holder) {
-                if (holder.caller_id == releaser) {
-                    released += holder.permits;
-                    return true;
-                }
-                return false;
-            });
-        holders.erase(remove_it, holders.end());
-    } else {
-        int to_release = permits;
-        for (auto it = holders.begin(); it != holders.end() && to_release > 0;) {
-            if (it->caller_id == releaser) {
-                int release_amount = std::min(to_release, it->permits);
-                it->permits -= release_amount;
-                to_release -= release_amount;
-                released += release_amount;
+    const std::string owner = owner_id.empty() ? holder_it->owner_id : owner_id;
+    if (owner != holder_it->owner_id) {
+        LOG_ERROR("[DistributedSemaphore] Release denied: owner mismatch for token " + std::to_string(grant_token));
+        return false;
+    }
 
-                if (it->permits == 0) {
-                    it = holders.erase(it);
-                } else {
-                    ++it;
-                }
-            } else {
-                ++it;
-            }
+    const std::string request_id = holder_it->request_id;
+    const std::string task_id = holder_it->task_id;
+    int release_amount = (permits <= 0) ? holder_it->permits : std::min(permits, holder_it->permits);
+    if (release_amount <= 0) {
+        return false;
+    }
+
+    holder_it->permits -= release_amount;
+    if (holder_it->permits == 0) {
+        holders.erase(holder_it);
+        request_to_grant_token_.erase(request_id);
+    }
+
+    {
+        auto& owner_sems = owner_semaphore_map_[owner];
+        auto erase_it = std::find(owner_sems.begin(), owner_sems.end(), semaphore_id);
+        if (erase_it != owner_sems.end()) {
+            owner_sems.erase(erase_it);
         }
     }
 
-    if (released > 0) {
-        {
-            const int available = semaphore->getAvailablePermits();
-            const int allocated = semaphore->getAllocatedPermits();
-            std::ostringstream oss;
-            oss << "[DistributedSemaphore] Released: " << semaphore_id 
-                << " (released=" << released
-                << ", allocated=" << allocated
-                << ", available=" << available << ")"
-                << " by " << releaser;
-            LOG(oss.str());
-        }
+    const int available = semaphore->getAvailablePermits();
+    const int allocated = semaphore->getAllocatedPermits();
+    std::ostringstream oss;
+    oss << "[DistributedSemaphore] Released: " << semaphore_id
+        << " request_id=" << request_id
+        << " grant_token=" << grant_token
+        << " (released=" << release_amount
+        << ", allocated=" << allocated
+        << ", available=" << available << ")"
+        << " by " << owner;
+    if (!task_id.empty()) {
+        oss << " task=" << task_id;
+    }
+    LOG(oss.str());
 
-        auto& node_sems = node_semaphore_map_[local_node_id_];
-        node_sems.erase(std::remove(node_sems.begin(), node_sems.end(), semaphore_id), node_sems.end());
+    sendReleaseMessage(semaphore_id, release_amount, grant_token, request_id, owner, task_id);
+    processLocalQueue(semaphore);
+    return true;
+}
 
-        sendReleaseMessage(semaphore_id, released);
-        processLocalQueue(semaphore);
-        return true;
+bool DistributedSemaphore::releaseByRequestId(
+    const std::string& semaphore_id,
+    const std::string& request_id,
+    int permits,
+    const std::string& owner_id
+) {
+    std::lock_guard<std::mutex> lock(global_mutex_);
+    auto it = request_to_grant_token_.find(request_id);
+    if (it == request_to_grant_token_.end()) {
+        LOG_ERROR("[DistributedSemaphore] Release denied: unknown request_id: " + request_id);
+        return false;
+    }
+    const uint64_t grant_token = it->second;
+
+    auto sem_it = semaphores_.find(semaphore_id);
+    if (sem_it == semaphores_.end()) {
+        LOG_ERROR("[DistributedSemaphore] Semaphore not found: " + semaphore_id);
+        return false;
     }
 
-    return false;
+    auto semaphore = sem_it->second;
+    std::lock_guard<std::mutex> sem_lock(semaphore->mutex);
+    auto& holders = semaphore->holders;
+    auto holder_it = std::find_if(holders.begin(), holders.end(),
+        [&request_id, grant_token](const SemaphoreHolder& holder) {
+            return holder.request_id == request_id && holder.grant_token == grant_token;
+        });
+    if (holder_it == holders.end()) {
+        LOG_ERROR("[DistributedSemaphore] Release denied: request_id does not match semaphore holder: " + request_id);
+        return false;
+    }
+
+    const std::string owner = owner_id.empty() ? holder_it->owner_id : owner_id;
+    if (owner != holder_it->owner_id) {
+        LOG_ERROR("[DistributedSemaphore] Release denied: owner mismatch for request_id " + request_id);
+        return false;
+    }
+
+    int release_amount = (permits <= 0) ? holder_it->permits : std::min(permits, holder_it->permits);
+    if (release_amount <= 0) {
+        return false;
+    }
+
+    const std::string task_id = holder_it->task_id;
+    holder_it->permits -= release_amount;
+    if (holder_it->permits == 0) {
+        holders.erase(holder_it);
+        request_to_grant_token_.erase(request_id);
+    }
+
+    {
+        auto& owner_sems = owner_semaphore_map_[owner];
+        auto erase_it = std::find(owner_sems.begin(), owner_sems.end(), semaphore_id);
+        if (erase_it != owner_sems.end()) {
+            owner_sems.erase(erase_it);
+        }
+    }
+
+    const int available = semaphore->getAvailablePermits();
+    const int allocated = semaphore->getAllocatedPermits();
+    std::ostringstream oss;
+    oss << "[DistributedSemaphore] Released: " << semaphore_id
+        << " request_id=" << request_id
+        << " grant_token=" << grant_token
+        << " (released=" << release_amount
+        << ", allocated=" << allocated
+        << ", available=" << available << ")"
+        << " by " << owner;
+    if (!task_id.empty()) {
+        oss << " task=" << task_id;
+    }
+    LOG(oss.str());
+
+    sendReleaseMessage(semaphore_id, release_amount, grant_token, request_id, owner, task_id);
+    processLocalQueue(semaphore);
+    return true;
 }
 
 void DistributedSemaphore::clear() {
@@ -232,12 +365,16 @@ void DistributedSemaphore::clear() {
     std::lock_guard<std::mutex> lock(global_mutex_);
 
     for (auto& pair : pending_requests_) {
-        pair.second.promise.set_value(false);
+        try {
+            pair.second.promise.set_value(false);
+        } catch (...) {
+        }
     }
 
     semaphores_.clear();
     pending_requests_.clear();
-    node_semaphore_map_.clear();
+    owner_semaphore_map_.clear();
+    request_to_grant_token_.clear();
 
     LOG("[DistributedSemaphore] Cleared");
 }
@@ -246,6 +383,10 @@ std::string DistributedSemaphore::generateRequestId() {
     auto count = ++request_counter_;
     auto timestamp = std::chrono::system_clock::now().time_since_epoch().count();
     return "sem_req_" + local_node_id_ + "_" + std::to_string(timestamp) + "_" + std::to_string(count);
+}
+
+uint64_t DistributedSemaphore::generateGrantToken() {
+    return ++grant_token_counter_;
 }
 
 void DistributedSemaphore::sendAcquireRequest(const std::string& semaphore_id, const SemaphoreRequest& request) {
@@ -265,7 +406,7 @@ void DistributedSemaphore::sendAcquireRequest(const std::string& semaphore_id, c
     payload["permits"] = request.permits;
     payload["priority"] = request.priority;
     payload["timeout_s"] = request.timeout_s;
-    payload["caller_id"] = request.caller_id;
+    payload["owner_id"] = request.owner_id;
     payload["task_id"] = request.task_id;
 
     std::string payload_str = payload.dump();
@@ -275,7 +416,14 @@ void DistributedSemaphore::sendAcquireRequest(const std::string& semaphore_id, c
     comm_->sendMessage("COORDINATOR", msg);
 }
 
-void DistributedSemaphore::sendReleaseMessage(const std::string& semaphore_id, int permits) {
+void DistributedSemaphore::sendReleaseMessage(
+    const std::string& semaphore_id,
+    int permits,
+    uint64_t grant_token,
+    const std::string& request_id,
+    const std::string& owner_id,
+    const std::string& task_id
+) {
     if (!comm_) {
         return;
     }
@@ -289,6 +437,10 @@ void DistributedSemaphore::sendReleaseMessage(const std::string& semaphore_id, i
     json payload;
     payload["semaphore_id"] = semaphore_id;
     payload["permits"] = permits;
+    payload["grant_token"] = grant_token;
+    payload["request_id"] = request_id;
+    payload["owner_id"] = owner_id;
+    payload["task_id"] = task_id;
 
     std::string payload_str = payload.dump();
     msg.payload.assign(payload_str.begin(), payload_str.end());
@@ -301,23 +453,46 @@ void DistributedSemaphore::processLocalQueue(std::shared_ptr<LocalSemaphore> sem
     while (!semaphore->request_queue.empty()) {
         auto request = semaphore->request_queue.top();
 
-        if (tryGrantLocal(semaphore, request)) {
+        uint64_t grant_token = 0;
+        if (tryGrantLocal(semaphore, request, &grant_token)) {
             semaphore->request_queue.pop();
-            LOG("[DistributedSemaphore] Processed queued request: " + request.request_id);
+            auto pending_it = pending_requests_.find(request.request_id);
+            if (pending_it != pending_requests_.end()) {
+                try {
+                    pending_it->second.promise.set_value(true);
+                } catch (...) {
+                }
+                pending_requests_.erase(pending_it);
+            }
+
+            std::ostringstream oss;
+            oss << "[DistributedSemaphore] Processed queued request: " << request.request_id
+                << " grant_token=" << grant_token
+                << " owner=" << request.owner_id;
+            if (!request.task_id.empty()) {
+                oss << " task=" << request.task_id;
+            }
+            LOG(oss.str());
         } else {
             break;
         }
     }
 }
 
-bool DistributedSemaphore::tryGrantLocal(std::shared_ptr<LocalSemaphore> semaphore, const SemaphoreRequest& request) {
+bool DistributedSemaphore::tryGrantLocal(
+    std::shared_ptr<LocalSemaphore> semaphore,
+    const SemaphoreRequest& request,
+    uint64_t* out_grant_token
+) {
     if (semaphore->getAvailablePermits() < request.permits) {
         return false;
     }
 
     SemaphoreHolder holder;
+    holder.request_id = request.request_id;
+    holder.grant_token = generateGrantToken();
     holder.node_id = request.node_id;
-    holder.caller_id = request.caller_id;
+    holder.owner_id = request.owner_id;
     holder.task_id = request.task_id;
     holder.permits = request.permits;
     holder.acquired_at = std::chrono::system_clock::now();
@@ -325,7 +500,11 @@ bool DistributedSemaphore::tryGrantLocal(std::shared_ptr<LocalSemaphore> semapho
     holder.priority = request.priority;
 
     semaphore->holders.push_back(holder);
-    node_semaphore_map_[request.node_id].push_back(request.semaphore_id);
+    owner_semaphore_map_[request.owner_id].push_back(request.semaphore_id);
+    request_to_grant_token_[request.request_id] = holder.grant_token;
+    if (out_grant_token) {
+        *out_grant_token = holder.grant_token;
+    }
 
     return true;
 }

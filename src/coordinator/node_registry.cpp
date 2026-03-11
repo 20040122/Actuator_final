@@ -33,8 +33,7 @@ void NodeRegistry::shutdown() {
 }
 
 bool NodeRegistry::registerNode(const NodeRegisterMessage& register_msg,
-                                std::string& node_id,
-                                uint64_t& session_token) {
+                                std::string& node_id) {
     std::lock_guard<std::mutex> lock(mutex_);
     
     if (!initialized_) {
@@ -42,8 +41,6 @@ bool NodeRegistry::registerNode(const NodeRegisterMessage& register_msg,
     }
     
     node_id = register_msg.node_id;
-    session_token = getCurrentTimeMs();
-    
     NodeInfo info;
     info.node_id = node_id;
     info.node_name = register_msg.node_name;

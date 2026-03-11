@@ -4,7 +4,8 @@
         "total_nodes": 128,
         "active_nodes": [
             "S1",
-            "S2"
+            "S2",
+            "S3"
         ],
         "node_communication": {
             "protocol": "INTER_SAT_LINK",
@@ -59,7 +60,8 @@
                 "type": "TIME_BARRIER",
                 "participants": [
                     "S1",
-                    "S2"
+                    "S2",
+                    "S3"
                 ],
                 "anchor_time": "01-12T08:00:00+08:00",
                 "window_s": 30,
@@ -71,6 +73,7 @@
                 "participants": [
                     "S1",
                     "S2",
+                    "S3",
                     "S128"
                 ],
                 "timeout_s": 180

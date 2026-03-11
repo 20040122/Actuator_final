@@ -1,6 +1,8 @@
 ```shell
 Remove-Item -Recurse -Force e:\Codex\build\CMakeCache.txt, e:\Codex\build\CMakeFiles
+
 MS_LOG_LEVEL=debug ./build/main
+
 $env:MS_LOG_LEVEL = "debug"; .\build\main.exe
 ```
 # 构建信息：

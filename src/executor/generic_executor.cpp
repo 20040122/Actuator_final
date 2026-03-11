@@ -94,27 +94,6 @@ void GenericExecutor::shutdown() {
     log("INFO", "执行器已关闭: " + config_.executor_id);
 }
 
-void GenericExecutor::registerHandler(std::shared_ptr<ICommandHandler> handler) {
-    if (!handler) {
-        return;
-    }
-    
-    std::lock_guard<std::mutex> lock(handlers_mutex_);
-    std::string type = handler->getCommandType();
-    handlers_[type] = handler;
-    log("DEBUG", "注册命令处理器: " + type);
-}
-
-void GenericExecutor::unregisterHandler(const std::string& command_type) {
-    std::lock_guard<std::mutex> lock(handlers_mutex_);
-    handlers_.erase(command_type);
-}
-
-bool GenericExecutor::hasHandler(const std::string& command_type) const {
-    std::lock_guard<std::mutex> lock(handlers_mutex_);
-    return handlers_.find(command_type) != handlers_.end();
-}
-
 ExecutionResult GenericExecutor::executeTask(const TaskSegment& task, 
                                               const BehaviorNode& behavior) {
     auto ctx = std::make_shared<ExecutionContext>();
@@ -528,16 +507,7 @@ ExecutionResult GenericExecutor::executeCommand(
     if (command.empty()) {
         return ExecutionResult::Success();
     }
-    
-    {
-        std::lock_guard<std::mutex> lock(handlers_mutex_);
-        auto it = handlers_.find(command);
-        if (it != handlers_.end()) {
-            log("DEBUG", "使用注册处理器执行: " + command);
-            return it->second->execute(command, params, var_mgr_);
-        }
-    }
-    
+
     return executeBuiltinCommand(command, params);
 }
 
@@ -558,15 +528,34 @@ ExecutionResult GenericExecutor::executeBuiltinCommand(
         }
         
         bool success = false;
+        uint64_t grant_token = 0;
+        std::string request_id;
         if (distributed_sem_mgr_) {
             std::string task_id = var_mgr_.exists("task_id") ? var_mgr_.get("task_id").asString() : "";
-            success = distributed_sem_mgr_->acquire(sem_id, 1, 5, timeout, task_id, config_.executor_id);
+            success = distributed_sem_mgr_->acquire(
+                sem_id,
+                1,
+                5,
+                timeout,
+                task_id,
+                config_.executor_id,
+                &grant_token,
+                &request_id
+            );
         } else {
             log("ERROR", "未配置分布式信号量管理器，无法获取信号量: " + sem_id);
         }
         
         if (success) {
-            return ExecutionResult::Success("信号量获取成功: " + sem_id);
+            const std::string token_var = "semaphore_grant_token_" + sem_id;
+            const std::string req_var = "semaphore_request_id_" + sem_id;
+            var_mgr_.set(token_var, VariableValue(std::to_string(grant_token)), Scope::INTERMEDIATE);
+            var_mgr_.set(req_var, VariableValue(request_id), Scope::INTERMEDIATE);
+            return ExecutionResult::Success(
+                "信号量获取成功: " + sem_id +
+                " token=" + std::to_string(grant_token) +
+                " request_id=" + request_id
+            );
         } else {
             return ExecutionResult::Failure("信号量获取超时: " + sem_id);
         }
@@ -579,9 +568,26 @@ ExecutionResult GenericExecutor::executeBuiltinCommand(
         }
         
         if (distributed_sem_mgr_) {
-            distributed_sem_mgr_->release(sem_id, 0, config_.executor_id);
+            bool release_ok = false;
+            const std::string token_var = "semaphore_grant_token_" + sem_id;
+            if (var_mgr_.exists(token_var)) {
+                std::string token_str = var_mgr_.get(token_var).asString();
+                try {
+                    uint64_t token = static_cast<uint64_t>(std::stoull(token_str));
+                    release_ok = distributed_sem_mgr_->releaseByGrantToken(sem_id, token, 0, config_.executor_id);
+                } catch (...) {
+                    release_ok = false;
+                }
+            }
+            if (!release_ok) {
+                release_ok = distributed_sem_mgr_->release(sem_id, 0, config_.executor_id);
+            }
+            if (!release_ok) {
+                return ExecutionResult::Failure("信号量释放失败: " + sem_id);
+            }
         } else {
             log("ERROR", "未配置分布式信号量管理器，无法释放信号量: " + sem_id);
+            return ExecutionResult::Failure("未配置分布式信号量管理器: " + sem_id);
         }
         return ExecutionResult::Success("信号量已释放: " + sem_id);
     }

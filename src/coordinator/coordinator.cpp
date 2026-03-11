@@ -130,6 +130,78 @@ bool parseBatchTaskAssignAckPayload(const std::vector<uint8_t>& payload, BatchTa
     return true;
 }
 
+std::vector<uint8_t> serializeTaskProgressPayload(const TaskProgressMessage& progress) {
+    json j;
+    j["segment_id"] = progress.segment_id;
+    j["task_id"] = progress.task_id;
+    j["status"] = static_cast<int>(progress.status);
+    j["progress_percent"] = progress.progress_percent;
+    j["current_action"] = progress.current_action;
+    j["message"] = progress.message;
+    j["output_vars"] = progress.output_vars;
+    const std::string payload_str = j.dump();
+    return std::vector<uint8_t>(payload_str.begin(), payload_str.end());
+}
+
+bool parseTaskProgressPayload(const std::vector<uint8_t>& payload, TaskProgressMessage& progress) {
+    try {
+        const std::string payload_str(payload.begin(), payload.end());
+        json j = json::parse(payload_str);
+        progress.segment_id = j.value("segment_id", "");
+        progress.task_id = j.value("task_id", "");
+        progress.status = static_cast<TaskStatus>(j.value("status", static_cast<int>(TaskStatus::PENDING)));
+        progress.progress_percent = static_cast<uint8_t>(j.value("progress_percent", 0));
+        progress.current_action = j.value("current_action", "");
+        progress.message = j.value("message", "");
+        progress.output_vars.clear();
+        if (j.contains("output_vars")) {
+            for (auto it = j["output_vars"].begin(); it != j["output_vars"].end(); ++it) {
+                progress.output_vars[it.key()] = jsonValueToString(it.value());
+            }
+        }
+    } catch (const std::exception&) {
+        return false;
+    }
+    return true;
+}
+
+std::vector<uint8_t> serializeTaskCompletePayload(const TaskCompleteMessage& complete) {
+    json j;
+    j["segment_id"] = complete.segment_id;
+    j["task_id"] = complete.task_id;
+    j["success"] = complete.success;
+    j["actual_start"] = complete.actual_start;
+    j["actual_end"] = complete.actual_end;
+    j["actual_profit"] = complete.actual_profit;
+    j["result_summary"] = complete.result_summary;
+    j["output_data"] = complete.output_data;
+    const std::string payload_str = j.dump();
+    return std::vector<uint8_t>(payload_str.begin(), payload_str.end());
+}
+
+bool parseTaskCompletePayload(const std::vector<uint8_t>& payload, TaskCompleteMessage& complete) {
+    try {
+        const std::string payload_str(payload.begin(), payload.end());
+        json j = json::parse(payload_str);
+        complete.segment_id = j.value("segment_id", "");
+        complete.task_id = j.value("task_id", "");
+        complete.success = j.value("success", false);
+        complete.actual_start = j.value("actual_start", "");
+        complete.actual_end = j.value("actual_end", "");
+        complete.actual_profit = j.value("actual_profit", 0);
+        complete.result_summary = j.value("result_summary", "");
+        complete.output_data.clear();
+        if (j.contains("output_data")) {
+            for (auto it = j["output_data"].begin(); it != j["output_data"].end(); ++it) {
+                complete.output_data[it.key()] = jsonValueToString(it.value());
+            }
+        }
+    } catch (const std::exception&) {
+        return false;
+    }
+    return true;
+}
+
 TaskSegment taskAssignToSegment(const TaskAssignMessage& task, const std::string& satellite_id) {
     TaskSegment segment;
     segment.segment_id = task.segment_id;
@@ -229,6 +301,7 @@ bool Coordinator::initialize(const std::string& global_config_file, const std::s
     initializeExecutors();
     std::cout << "[Coordinator] ✓ 执行器初始化完成 (" << executors_.size() << " 个执行器)" << std::endl;
 
+    initializeMessageRouters();
     registerLocalMessageHandlers();
     
     std::cout << "\n[Coordinator] 已注册节点摘要:" << std::endl;
@@ -400,6 +473,26 @@ void Coordinator::stop() {
     running_.store(false);
 }
 
+void Coordinator::initializeMessageRouters() {
+    coordinator_message_router_.clear();
+    satellite_message_router_.clear();
+
+    coordinator_message_router_[MessageType::BATCH_TASK_ASSIGN_ACK] = [this](const Message& message) {
+        onCoordinatorBatchAck(message);
+    };
+    coordinator_message_router_[MessageType::TASK_PROGRESS] = [this](const Message& message) {
+        onCoordinatorTaskProgress(message);
+    };
+    coordinator_message_router_[MessageType::TASK_COMPLETE] = [this](const Message& message) {
+        onCoordinatorTaskComplete(message);
+    };
+
+    satellite_message_router_[MessageType::BATCH_TASK_ASSIGN] =
+        [this](const std::string& satellite_id, const Message& message) {
+            onSatelliteBatchTaskAssign(satellite_id, message);
+        };
+}
+
 void Coordinator::registerLocalMessageHandlers() {
     if (!comm_) {
         return;
@@ -428,10 +521,18 @@ void Coordinator::unregisterLocalMessageHandlers() {
 }
 
 void Coordinator::handleCoordinatorMessage(const Message& message) {
-    if (message.header.msg_type != MessageType::BATCH_TASK_ASSIGN_ACK) {
+    auto it = coordinator_message_router_.find(message.header.msg_type);
+    if (it == coordinator_message_router_.end()) {
+        std::ostringstream oss;
+        oss << "[Coordinator] WARN: 未注册的协调器消息类型: "
+            << messageTypeToString(message.header.msg_type);
+        LOG(oss.str());
         return;
     }
+    it->second(message);
+}
 
+void Coordinator::onCoordinatorBatchAck(const Message& message) {
     BatchTaskAssignAck ack;
     if (!parseBatchTaskAssignAckPayload(message.payload, ack)) {
         LOG_ERROR("[Coordinator] ERROR: 无法解析 BATCH_TASK_ASSIGN_ACK payload");
@@ -453,11 +554,60 @@ void Coordinator::handleCoordinatorMessage(const Message& message) {
     }
 }
 
-void Coordinator::handleSatelliteMessage(const std::string& satellite_id, const Message& message) {
-    if (message.header.msg_type != MessageType::BATCH_TASK_ASSIGN) {
+void Coordinator::onCoordinatorTaskProgress(const Message& message) {
+    TaskProgressMessage progress;
+    if (!parseTaskProgressPayload(message.payload, progress)) {
+        LOG_ERROR("[Coordinator] ERROR: 无法解析 TASK_PROGRESS payload");
         return;
     }
 
+    std::ostringstream oss;
+    oss << "[Coordinator] 进度上报: sat=" << message.header.source_node_id
+        << ", task=" << progress.task_id
+        << ", segment=" << progress.segment_id
+        << ", status=" << taskStatusToString(progress.status)
+        << ", progress=" << static_cast<int>(progress.progress_percent) << "%";
+    if (!progress.current_action.empty()) {
+        oss << ", action=" << progress.current_action;
+    }
+    if (!progress.message.empty()) {
+        oss << ", msg=" << progress.message;
+    }
+    LOG(oss.str());
+}
+
+void Coordinator::onCoordinatorTaskComplete(const Message& message) {
+    TaskCompleteMessage complete;
+    if (!parseTaskCompletePayload(message.payload, complete)) {
+        LOG_ERROR("[Coordinator] ERROR: 无法解析 TASK_COMPLETE payload");
+        return;
+    }
+
+    std::ostringstream oss;
+    oss << "[Coordinator] 完成上报: sat=" << message.header.source_node_id
+        << ", task=" << complete.task_id
+        << ", segment=" << complete.segment_id
+        << ", result=" << (complete.success ? "SUCCESS" : "FAILED");
+    if (!complete.result_summary.empty()) {
+        oss << ", summary=" << complete.result_summary;
+    }
+    LOG(oss.str());
+}
+
+void Coordinator::handleSatelliteMessage(const std::string& satellite_id, const Message& message) {
+    auto it = satellite_message_router_.find(message.header.msg_type);
+    if (it == satellite_message_router_.end()) {
+        std::ostringstream oss;
+        oss << "[Coordinator] WARN: 未注册的卫星消息类型: "
+            << messageTypeToString(message.header.msg_type)
+            << " satellite=" << satellite_id;
+        LOG(oss.str());
+        return;
+    }
+    it->second(satellite_id, message);
+}
+
+void Coordinator::onSatelliteBatchTaskAssign(const std::string& satellite_id, const Message& message) {
     BatchTaskAssignMessage batch_msg;
     BatchTaskAssignAck ack;
     ack.message_id = "";
@@ -470,19 +620,69 @@ void Coordinator::handleSatelliteMessage(const std::string& satellite_id, const 
         ack.rejection_reasons["payload"] = "invalid batch task payload";
     } else {
         ack.message_id = batch_msg.message_id;
-        std::vector<TaskSegment> tasks;
-        tasks.reserve(batch_msg.scheduled_tasks.size());
-        for (const auto& task : batch_msg.scheduled_tasks) {
-            tasks.push_back(taskAssignToSegment(task, satellite_id));
-            ack.accepted_task_ids.push_back(task.task_id);
+        int task_total = static_cast<int>(batch_msg.scheduled_tasks.size());
+        int completed = 0;
+        bool all_success = true;
+
+        for (const auto& task_msg : batch_msg.scheduled_tasks) {
+            TaskSegment task = taskAssignToSegment(task_msg, satellite_id);
+
+            TaskProgressMessage progress;
+            progress.segment_id = task.segment_id;
+            progress.task_id = task.task_id;
+            progress.status = TaskStatus::RUNNING;
+            progress.progress_percent = static_cast<uint8_t>((completed * 100) / std::max(1, task_total));
+            progress.current_action = "execute_task";
+            progress.message = "task started";
+
+            Message progress_msg;
+            progress_msg.header.magic = MessageHeader::MAGIC_NUMBER;
+            progress_msg.header.version = MessageHeader::PROTOCOL_VERSION;
+            progress_msg.header.msg_type = MessageType::TASK_PROGRESS;
+            progress_msg.header.source_node_id = satellite_id;
+            progress_msg.header.dest_node_id = config_.coordinator_id;
+            progress_msg.header.priority = Priority::NORMAL;
+            progress_msg.header.timestamp_ms = getCurrentTimeMs();
+            progress_msg.payload = serializeTaskProgressPayload(progress);
+            progress_msg.header.payload_size = static_cast<uint32_t>(progress_msg.payload.size());
+            progress_msg.header.checksum = 0;
+            comm_->sendMessage(config_.coordinator_id, progress_msg);
+
+            bool task_ok = executeTasksForSatellite(satellite_id, std::vector<TaskSegment>{task});
+            completed++;
+            all_success = all_success && task_ok;
+
+            TaskCompleteMessage complete;
+            complete.segment_id = task.segment_id;
+            complete.task_id = task.task_id;
+            complete.success = task_ok;
+            complete.actual_start = task.execution.planned_start;
+            complete.actual_end = task.execution.planned_end;
+            complete.actual_profit = 0;
+            complete.result_summary = task_ok ? "task completed" : "task failed";
+
+            Message complete_msg;
+            complete_msg.header.magic = MessageHeader::MAGIC_NUMBER;
+            complete_msg.header.version = MessageHeader::PROTOCOL_VERSION;
+            complete_msg.header.msg_type = MessageType::TASK_COMPLETE;
+            complete_msg.header.source_node_id = satellite_id;
+            complete_msg.header.dest_node_id = config_.coordinator_id;
+            complete_msg.header.priority = task_ok ? Priority::NORMAL : Priority::URGENT;
+            complete_msg.header.timestamp_ms = getCurrentTimeMs();
+            complete_msg.payload = serializeTaskCompletePayload(complete);
+            complete_msg.header.payload_size = static_cast<uint32_t>(complete_msg.payload.size());
+            complete_msg.header.checksum = 0;
+            comm_->sendMessage(config_.coordinator_id, complete_msg);
+
+            if (task_ok) {
+                ack.accepted_task_ids.push_back(task.task_id);
+            } else {
+                ack.rejected_task_ids.push_back(task.task_id);
+                ack.rejection_reasons[task.task_id] = "task execution failed";
+            }
         }
 
-        ack.accepted = executeTasksForSatellite(satellite_id, tasks);
-        if (!ack.accepted) {
-            ack.rejected_task_ids = ack.accepted_task_ids;
-            ack.accepted_task_ids.clear();
-            ack.rejection_reasons["execution"] = "one or more tasks failed";
-        }
+        ack.accepted = all_success;
     }
 
     Message ack_message;
@@ -523,10 +723,9 @@ bool Coordinator::registerSatelliteNodes(const ScheduleParser::MultiSatSchedule&
         register_msg.metadata["thermal_status"] = sat_info.thermal_status;
         
         std::string assigned_id;
-        uint64_t session_token;
-        if (node_registry_->registerNode(register_msg, assigned_id, session_token)) {
+        if (node_registry_->registerNode(register_msg, assigned_id)) {
             std::cout << "[Coordinator]   ✓ 注册卫星: " << sat_info.satellite_id 
-                      << " (" << sat_info.name << ") - 会话: " << session_token << std::endl;
+                      << " (" << sat_info.name << ")" << std::endl;
             registered_count++;
         } else {
             std::cerr << "[Coordinator]   ✗ Failed to register satellite: " << sat_info.satellite_id << std::endl;

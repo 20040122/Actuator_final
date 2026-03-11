@@ -187,7 +187,6 @@ ScheduleParser::MultiSatSchedule ScheduleParser::parseAllSatellites(
     return result;
 }
 
-// ============ 新增：全局配置解析 ============
 GlobalConfigParser::GlobalConfig GlobalConfigParser::parse(
     const std::string& config_file) {
     
@@ -206,7 +205,6 @@ GlobalConfigParser::GlobalConfig GlobalConfigParser::parse(
         
         config.plan_id = config_json.value("plan_id", "");
         
-        // 解析多节点配置
         if (config_json.contains("multi_node_config")) {
             auto& multi = config_json["multi_node_config"];
             config.total_nodes = multi.value("total_nodes", 0);
@@ -225,7 +223,6 @@ GlobalConfigParser::GlobalConfig GlobalConfigParser::parse(
             }
         }
         
-        // 解析共享资源/信号量
         if (config_json.contains("shared_resources") && 
             config_json["shared_resources"].contains("semaphores")) {
             for (auto& sem : config_json["shared_resources"]["semaphores"]) {

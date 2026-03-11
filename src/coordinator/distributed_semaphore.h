@@ -44,7 +44,7 @@ enum class SemaphoreRequestStatus {
 struct SemaphoreRequest {
     std::string request_id;
     std::string node_id;
-    std::string caller_id;
+    std::string owner_id;
     std::string task_id;
     std::string semaphore_id;
     int permits;
@@ -58,8 +58,10 @@ struct SemaphoreRequest {
 };
 
 struct SemaphoreHolder {
+    std::string request_id;
+    uint64_t grant_token;
     std::string node_id;
-    std::string caller_id;
+    std::string owner_id;
     std::string task_id;
     int permits;
     std::chrono::system_clock::time_point acquired_at;
@@ -94,14 +96,28 @@ public:
         int priority = 5,
         int timeout_s = 0,
         const std::string& task_id = "",
-        const std::string& caller_id = "",
+        const std::string& owner_id = "",
+        uint64_t* out_grant_token = nullptr,
+        std::string* out_request_id = nullptr,
         const std::chrono::system_clock::time_point& deadline = std::chrono::system_clock::time_point()
     );
 
     bool release(
         const std::string& semaphore_id,
         int permits = 0,
-        const std::string& caller_id = ""
+        const std::string& owner_id = ""
+    );
+    bool releaseByGrantToken(
+        const std::string& semaphore_id,
+        uint64_t grant_token,
+        int permits = 0,
+        const std::string& owner_id = ""
+    );
+    bool releaseByRequestId(
+        const std::string& semaphore_id,
+        const std::string& request_id,
+        int permits = 0,
+        const std::string& owner_id = ""
     );
 
     void clear();
@@ -127,16 +143,30 @@ private:
     std::string local_node_id_;
     std::map<std::string, std::shared_ptr<LocalSemaphore>> semaphores_;
     std::map<std::string, PendingRequest> pending_requests_;
-    std::map<std::string, std::vector<std::string>> node_semaphore_map_;
+    std::map<std::string, std::vector<std::string>> owner_semaphore_map_;
+    std::map<std::string, uint64_t> request_to_grant_token_;
     mutable std::mutex global_mutex_;
     std::atomic<bool> running_;
     std::atomic<uint64_t> request_counter_;
+    std::atomic<uint64_t> grant_token_counter_;
 
     std::string generateRequestId();
+    uint64_t generateGrantToken();
     void sendAcquireRequest(const std::string& semaphore_id, const SemaphoreRequest& request);
-    void sendReleaseMessage(const std::string& semaphore_id, int permits);
+    void sendReleaseMessage(
+        const std::string& semaphore_id,
+        int permits,
+        uint64_t grant_token,
+        const std::string& request_id,
+        const std::string& owner_id,
+        const std::string& task_id
+    );
     void processLocalQueue(std::shared_ptr<LocalSemaphore> semaphore);
-    bool tryGrantLocal(std::shared_ptr<LocalSemaphore> semaphore, const SemaphoreRequest& request);
+    bool tryGrantLocal(
+        std::shared_ptr<LocalSemaphore> semaphore,
+        const SemaphoreRequest& request,
+        uint64_t* out_grant_token = nullptr
+    );
     SemaphoreQueuePolicy parseQueuePolicy(const std::string& policy_str) const;
     ResourceType parseResourceType(const std::string& type_str) const;
     std::string resourceTypeToString(ResourceType type) const;

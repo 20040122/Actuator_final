@@ -53,17 +53,6 @@ struct ExecutionResult {
     }
 };
 
-class ICommandHandler {
-public:
-    virtual ~ICommandHandler() = default;
-    virtual ExecutionResult execute(
-        const std::string& command,
-        const std::map<std::string, std::string>& params,
-        VariableManager& var_mgr
-    ) = 0;
-    virtual std::string getCommandType() const = 0;
-};
-
 struct ExecutorConfig {
     std::string executor_id;
     std::string satellite_id;
@@ -120,10 +109,6 @@ public:
     bool initialize();
     void shutdown();
     
-    void registerHandler(std::shared_ptr<ICommandHandler> handler);
-    void unregisterHandler(const std::string& command_type);
-    bool hasHandler(const std::string& command_type) const;
-    
     ExecutionResult executeTask(const TaskSegment& task, const BehaviorNode& behavior);
     
     std::future<ExecutionResult> executeTaskAsync(
@@ -161,9 +146,6 @@ private:
     ConstraintEvaluator evaluator_;
     CommandStateManager state_mgr_;
     std::shared_ptr<coordinator::DistributedSemaphore> distributed_sem_mgr_;
-    
-    std::unordered_map<std::string, std::shared_ptr<ICommandHandler>> handlers_;
-    mutable std::mutex handlers_mutex_;
     
     struct PendingTask {
         TaskSegment task;
