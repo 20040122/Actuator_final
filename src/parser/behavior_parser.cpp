@@ -1,6 +1,4 @@
 #include "behavior_parser.h"
-#include <iostream>
-#include <sstream>
 
 
 static std::string replaceVariables(const std::string& text, const std::map<std::string, std::string>& params) {
@@ -44,12 +42,4 @@ std::vector<BehaviorNode> BehaviorTreeParser::instantiate(
     nodes.reserve(1);
     nodes.push_back(expandNode(definition, params));
     return nodes;
-}
-void BehaviorTreeParser::substituteVariables(
-    BehaviorNode& node,
-    const std::map<std::string, std::string>& params) {
-    for (std::map<std::string, std::string>::iterator it = node.params.begin(); 
-         it != node.params.end(); ++it) {
-        it->second = replaceVariables(it->second, params);
-    }
 }

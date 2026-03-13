@@ -1,30 +1,24 @@
 #include "variable_manager.h"
 #include <algorithm>
 #include <ctime>
-#include <iomanip>
 #include <fstream>
-#include <iostream>
 
 void VariableManager::set(const std::string& name, const VariableValue& value, Scope scope) {
     std::lock_guard<std::mutex> lock(mutex_);
     getScopeMap(scope)[name] = value;
-    logAccess("SET", name, scope);
 }
 VariableValue VariableManager::get(const std::string& name) const {
     std::lock_guard<std::mutex> lock(mutex_);
     auto it = local_vars_.find(name);
     if (it != local_vars_.end()) {
-        logAccess("GET", name, Scope::LOCAL);
         return it->second;
     }
     it = intermediate_vars_.find(name);
     if (it != intermediate_vars_.end()) {
-        logAccess("GET", name, Scope::INTERMEDIATE);
         return it->second;
     }
     it = global_vars_.find(name);
     if (it != global_vars_.end()) {
-        logAccess("GET", name, Scope::GLOBAL);
         return it->second;
     }
     throw std::runtime_error("Variable not found: " + name);
@@ -43,7 +37,6 @@ bool VariableManager::exists(const std::string& name, Scope scope) const {
 void VariableManager::remove(const std::string& name, Scope scope) {
     std::lock_guard<std::mutex> lock(mutex_);
     getScopeMap(scope).erase(name);
-    logAccess("REMOVE", name, scope);
 }
 void VariableManager::clearScope(Scope scope) {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -86,8 +79,6 @@ void VariableManager::setFromParams(const std::map<std::string, std::string>& pa
         value = VariableValue(value_str);
         getScopeMap(scope)[key] = value;
     }
-
-    logAccess("SET_BATCH", std::to_string(params.size()) + "_params", scope);
 }
 void VariableManager::loadFromGlobalConfig(const std::string& global_json_path) {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -175,7 +166,6 @@ void VariableManager::loadFromGlobalConfig(const std::string& global_json_path) 
             global_vars_["strategy_count"] = VariableValue(strategy_count);
         }
     }
-    logAccess("LOAD_GLOBAL_CONFIG", global_json_path, Scope::GLOBAL);
 }
 void VariableManager::loadFromScheduleConfig(const std::string& schedule_json_path, const std::string& satellite_id) {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -268,7 +258,6 @@ void VariableManager::loadFromScheduleConfig(const std::string& schedule_json_pa
             }
         }
     }
-    logAccess("LOAD_SCHEDULE_CONFIG", schedule_json_path, Scope::GLOBAL);
 }
 std::string VariableManager::createSnapshot(const std::string& description) {
     std::lock_guard<std::mutex> lock(mutex_); 
@@ -281,7 +270,6 @@ std::string VariableManager::createSnapshot(const std::string& description) {
     snapshot.intermediate_vars = intermediate_vars_;
     snapshot.description = description;
     snapshots_[snapshot_id] = snapshot;
-    logAccess("SNAPSHOT_CREATE", snapshot_id, Scope::GLOBAL); 
     return snapshot_id;
 }
 bool VariableManager::restoreSnapshot(const std::string& snapshot_id) {
@@ -294,20 +282,7 @@ bool VariableManager::restoreSnapshot(const std::string& snapshot_id) {
     global_vars_ = snapshot.global_vars;
     local_vars_ = snapshot.local_vars;
     intermediate_vars_ = snapshot.intermediate_vars;
-    logAccess("SNAPSHOT_RESTORE", snapshot_id, Scope::GLOBAL); 
     return true;
-}
-void VariableManager::clearSnapshots() {
-    std::lock_guard<std::mutex> lock(mutex_);
-    snapshots_.clear();
-}
-std::vector<std::string> VariableManager::listSnapshots() const {
-    std::lock_guard<std::mutex> lock(mutex_);   
-    std::vector<std::string> ids;
-    for (const auto& pair : snapshots_) {
-        ids.push_back(pair.first);
-    }
-    return ids;
 }
 std::map<std::string, VariableValue> VariableManager::getAllVariables(Scope scope) const {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -320,73 +295,6 @@ std::map<std::string, VariableValue> VariableManager::getAllVariables() const {
     all_vars.insert(intermediate_vars_.begin(), intermediate_vars_.end());
     all_vars.insert(local_vars_.begin(), local_vars_.end());
     return all_vars;
-}
-std::string VariableManager::exportToString() const {
-    std::lock_guard<std::mutex> lock(mutex_);  
-    std::ostringstream oss;
-    auto exportScope = [&](const std::map<std::string, VariableValue>& vars, const std::string& scope_name) {
-        for (const auto& pair : vars) {
-            oss << scope_name << ":" << pair.first << "=";           
-            const VariableValue& val = pair.second;
-            switch (val.getType()) {
-                case VariableValue::Type::INT:
-                    oss << "int:" << val.asInt();
-                    break;
-                case VariableValue::Type::DOUBLE:
-                    oss << "double:" << val.asDouble();
-                    break;
-                case VariableValue::Type::STRING:
-                    oss << "string:" << val.asString();
-                    break;
-                case VariableValue::Type::BOOL:
-                    oss << "bool:" << (val.asBool() ? "true" : "false");
-                    break;
-                default:
-                    oss << "unknown:";
-            }
-            oss << "\n";
-        }
-    };    
-    exportScope(global_vars_, "global");
-    exportScope(local_vars_, "local");
-    exportScope(intermediate_vars_, "intermediate");    
-    return oss.str();
-}
-void VariableManager::importFromString(const std::string& data) {
-    std::lock_guard<std::mutex> lock(mutex_);   
-    std::istringstream iss(data);
-    std::string line;
-    while (std::getline(iss, line)) {
-        if (line.empty()) continue;
-        size_t colon1 = line.find(':');
-        size_t equals = line.find('=');
-        size_t colon2 = line.find(':', equals);       
-        if (colon1 == std::string::npos || equals == std::string::npos || colon2 == std::string::npos) {
-            continue;
-        }
-        std::string scope_name = line.substr(0, colon1);
-        std::string name = line.substr(colon1 + 1, equals - colon1 - 1);
-        std::string type_str = line.substr(equals + 1, colon2 - equals - 1);
-        std::string value_str = line.substr(colon2 + 1);
-        Scope scope;
-        if (scope_name == "global") scope = Scope::GLOBAL;
-        else if (scope_name == "local") scope = Scope::LOCAL;
-        else if (scope_name == "intermediate") scope = Scope::INTERMEDIATE;
-        else continue;
-        VariableValue value;
-        if (type_str == "int") {
-            value = VariableValue(std::stoi(value_str));
-        } else if (type_str == "double") {
-            value = VariableValue(std::stod(value_str));
-        } else if (type_str == "bool") {
-            value = VariableValue(value_str == "true");
-        } else if (type_str == "string") {
-            value = VariableValue(value_str);
-        } else {
-            continue;
-        }
-        getScopeMap(scope)[name] = value;
-    }
 }
 std::map<std::string, VariableValue>& VariableManager::getScopeMap(Scope scope) {
     switch (scope) {
@@ -411,20 +319,6 @@ const std::map<std::string, VariableValue>& VariableManager::getScopeMap(Scope s
         default:
             throw std::runtime_error("Unknown scope");
     }
-}
-void VariableManager::logAccess(const std::string& operation, const std::string& name, Scope scope) const {
-    if (!tracking_enabled_) return;
-    std::string scope_str;
-    switch (scope) {
-        case Scope::GLOBAL: scope_str = "GLOBAL"; break;
-        case Scope::LOCAL: scope_str = "LOCAL"; break;
-        case Scope::INTERMEDIATE: scope_str = "INTERMEDIATE"; break;
-    }
-    std::time_t now = std::time(nullptr);
-    char time_buf[32];
-    std::strftime(time_buf, sizeof(time_buf), "%H:%M:%S", std::localtime(&now));
-    std::string log_entry = std::string(time_buf) + " [" + operation + "] " + scope_str + "::" + name;
-    access_log_.push_back(log_entry);
 }
 std::string VariableManager::generateSnapshotId() {
     std::ostringstream oss;

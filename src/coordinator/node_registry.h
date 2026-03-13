@@ -7,8 +7,8 @@
 #include <mutex>
 #include <chrono>
 #include <cstdint>
-#include <set>
 #include "message_types.h"
+#include "../core/types.h"
 
 namespace coordinator {
 
@@ -27,24 +27,6 @@ struct NodeInfo {
                  is_online(false) {}
 };
 
-struct NodeQueryCriteria {
-    std::set<std::string> node_types;
-    std::set<NodeStatus> statuses;
-    bool only_online;
-    
-    NodeQueryCriteria() : only_online(false) {}
-};
-
-class INodeRegistryListener {
-public:
-    virtual ~INodeRegistryListener() = default;
-    virtual void onNodeRegistered(const std::string& node_id) = 0;
-    virtual void onNodeUnregistered(const std::string& node_id, const std::string& reason) = 0;
-    virtual void onNodeStatusChanged(const std::string& node_id, NodeStatus old_status, NodeStatus new_status) = 0;
-    virtual void onNodeTimeout(const std::string& node_id) = 0;
-    virtual void onNodeRecovered(const std::string& node_id) = 0;
-};
-
 class NodeRegistry {
 public:
     explicit NodeRegistry(uint64_t heartbeat_timeout_ms = 30000);
@@ -59,27 +41,14 @@ public:
     bool registerNode(const NodeRegisterMessage& register_msg, std::string& node_id);
     bool unregisterNode(const std::string& node_id, const std::string& reason = "");
     
-    bool hasNode(const std::string& node_id) const;
     bool getNodeInfo(const std::string& node_id, NodeInfo& info) const;
     std::vector<std::string> getAllNodeIds() const;
-    std::vector<std::string> queryNodes(const NodeQueryCriteria& criteria) const;
-    
-    bool updateNodeStatus(const std::string& node_id, NodeStatus status);
-    bool updateHeartbeat(const std::string& node_id, const HeartbeatMessage& heartbeat);
-    
-    void registerListener(INodeRegistryListener* listener);
-    void unregisterListener(INodeRegistryListener* listener);
 
 private:
-    uint64_t getCurrentTimeMs() const;
     void notifyNodeRegistered(const std::string& node_id);
     void notifyNodeUnregistered(const std::string& node_id, const std::string& reason);
-    void notifyNodeStatusChanged(const std::string& node_id, NodeStatus old_status, NodeStatus new_status);
-    void notifyNodeTimeout(const std::string& node_id);
-    void notifyNodeRecovered(const std::string& node_id);
     
     std::map<std::string, NodeInfo> nodes_;
-    std::vector<INodeRegistryListener*> listeners_;
     uint64_t heartbeat_timeout_ms_;
     mutable std::mutex mutex_;
     bool initialized_;

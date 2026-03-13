@@ -167,8 +167,6 @@ private:
         const SemaphoreRequest& request,
         uint64_t* out_grant_token = nullptr
     );
-    SemaphoreQueuePolicy parseQueuePolicy(const std::string& policy_str) const;
-    ResourceType parseResourceType(const std::string& type_str) const;
     std::string resourceTypeToString(ResourceType type) const;
 };
 

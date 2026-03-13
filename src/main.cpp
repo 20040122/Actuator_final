@@ -25,9 +25,7 @@ int main(int argc, char* argv[]) {
 #ifdef _WIN32
     SetConsoleOutputCP(CP_UTF8);
 #endif
-    LOG("             多星执行系统                ");
-    LOG("========================================");
-    
+    LOG("===== 多星执行系统 ===== ");
     std::signal(SIGINT, signalHandler);
     std::signal(SIGTERM, signalHandler);
     

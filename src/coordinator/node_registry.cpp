@@ -1,5 +1,4 @@
 #include "node_registry.h"
-#include <algorithm>
 #include <iostream>
 
 namespace coordinator {
@@ -29,7 +28,6 @@ void NodeRegistry::shutdown() {
     }
     initialized_ = false;
     nodes_.clear();
-    listeners_.clear();
 }
 
 bool NodeRegistry::registerNode(const NodeRegisterMessage& register_msg,
@@ -46,7 +44,7 @@ bool NodeRegistry::registerNode(const NodeRegisterMessage& register_msg,
     info.node_name = register_msg.node_name;
     info.node_type = register_msg.node_type;
     info.status = NodeStatus::HEALTHY;
-    info.register_time_ms = getCurrentTimeMs();
+    info.register_time_ms = ::getCurrentTimeMs();
     info.last_heartbeat_ms = info.register_time_ms;
     info.is_online = true;
     
@@ -68,11 +66,6 @@ bool NodeRegistry::unregisterNode(const std::string& node_id, const std::string&
     notifyNodeUnregistered(node_id, reason);
     
     return true;
-}
-
-bool NodeRegistry::hasNode(const std::string& node_id) const {
-    std::lock_guard<std::mutex> lock(mutex_);
-    return nodes_.find(node_id) != nodes_.end();
 }
 
 bool NodeRegistry::getNodeInfo(const std::string& node_id, NodeInfo& info) const {
@@ -100,131 +93,13 @@ std::vector<std::string> NodeRegistry::getAllNodeIds() const {
     return ids;
 }
 
-std::vector<std::string> NodeRegistry::queryNodes(const NodeQueryCriteria& criteria) const {
-    std::lock_guard<std::mutex> lock(mutex_);
-    
-    std::vector<std::string> result;
-    
-    for (const auto& pair : nodes_) {
-        const NodeInfo& info = pair.second;
-        
-        if (!criteria.node_types.empty() && 
-            criteria.node_types.find(info.node_type) == criteria.node_types.end()) {
-            continue;
-        }
-        
-        if (!criteria.statuses.empty() && 
-            criteria.statuses.find(info.status) == criteria.statuses.end()) {
-            continue;
-        }
-        
-        if (criteria.only_online && !info.is_online) {
-            continue;
-        }
-        
-        result.push_back(pair.first);
-    }
-    
-    return result;
-}
-
-bool NodeRegistry::updateNodeStatus(const std::string& node_id, NodeStatus status) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    
-    auto it = nodes_.find(node_id);
-    if (it == nodes_.end()) {
-        return false;
-    }
-    
-    NodeStatus old_status = it->second.status;
-    if (old_status != status) {
-        it->second.status = status;
-        notifyNodeStatusChanged(node_id, old_status, status);
-    }
-    
-    return true;
-}
-
-bool NodeRegistry::updateHeartbeat(const std::string& node_id, const HeartbeatMessage& heartbeat) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    
-    auto it = nodes_.find(node_id);
-    if (it == nodes_.end()) {
-        return false;
-    }
-    
-    uint64_t current_time = getCurrentTimeMs();
-    bool was_offline = !it->second.is_online;
-    
-    it->second.last_heartbeat_ms = current_time;
-    it->second.status = heartbeat.status;
-    it->second.is_online = true;
-    
-    if (was_offline) {
-        notifyNodeRecovered(node_id);
-    }
-    
-    return true;
-}
-
-void NodeRegistry::registerListener(INodeRegistryListener* listener) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    if (listener) {
-        listeners_.push_back(listener);
-    }
-}
-
-void NodeRegistry::unregisterListener(INodeRegistryListener* listener) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    listeners_.erase(std::remove(listeners_.begin(), listeners_.end(), listener), listeners_.end());
-}
-
-uint64_t NodeRegistry::getCurrentTimeMs() const {
-    auto now = std::chrono::system_clock::now();
-    auto duration = now.time_since_epoch();
-    return std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
-}
-
 void NodeRegistry::notifyNodeRegistered(const std::string& node_id) {
-    for (auto* listener : listeners_) {
-        if (listener) {
-            listener->onNodeRegistered(node_id);
-        }
-    }
+    (void)node_id;
 }
 
 void NodeRegistry::notifyNodeUnregistered(const std::string& node_id, const std::string& reason) {
-    for (auto* listener : listeners_) {
-        if (listener) {
-            listener->onNodeUnregistered(node_id, reason);
-        }
-    }
-}
-
-void NodeRegistry::notifyNodeStatusChanged(const std::string& node_id, 
-                                          NodeStatus old_status, 
-                                          NodeStatus new_status) {
-    for (auto* listener : listeners_) {
-        if (listener) {
-            listener->onNodeStatusChanged(node_id, old_status, new_status);
-        }
-    }
-}
-
-void NodeRegistry::notifyNodeTimeout(const std::string& node_id) {
-    for (auto* listener : listeners_) {
-        if (listener) {
-            listener->onNodeTimeout(node_id);
-        }
-    }
-}
-
-void NodeRegistry::notifyNodeRecovered(const std::string& node_id) {
-    for (auto* listener : listeners_) {
-        if (listener) {
-            listener->onNodeRecovered(node_id);
-        }
-    }
+    (void)node_id;
+    (void)reason;
 }
 
 }

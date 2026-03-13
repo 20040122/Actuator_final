@@ -4,6 +4,14 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <chrono>
+#include <cstdint>
+
+inline uint64_t getCurrentTimeMs() {
+    auto now = std::chrono::system_clock::now();
+    auto duration = now.time_since_epoch();
+    return std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
+}
 
 enum class NodeState {
     NOT_STARTED,

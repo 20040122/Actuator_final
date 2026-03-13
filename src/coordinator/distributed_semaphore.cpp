@@ -397,7 +397,7 @@ void DistributedSemaphore::sendAcquireRequest(const std::string& semaphore_id, c
     Message msg;
     msg.header.msg_type = MessageType::SEM_ACQUIRE_REQUEST;
     msg.header.source_node_id = local_node_id_;
-    msg.header.dest_node_id = "COORDINATOR";
+    msg.header.dest_node_id = local_node_id_;
     msg.header.priority = Priority::NORMAL;
 
     json payload;
@@ -413,7 +413,7 @@ void DistributedSemaphore::sendAcquireRequest(const std::string& semaphore_id, c
     msg.payload.assign(payload_str.begin(), payload_str.end());
     msg.header.payload_size = msg.payload.size();
 
-    comm_->sendMessage("COORDINATOR", msg);
+    comm_->sendMessage(local_node_id_, msg);
 }
 
 void DistributedSemaphore::sendReleaseMessage(
@@ -431,7 +431,7 @@ void DistributedSemaphore::sendReleaseMessage(
     Message msg;
     msg.header.msg_type = MessageType::SEM_RELEASE;
     msg.header.source_node_id = local_node_id_;
-    msg.header.dest_node_id = "COORDINATOR";
+    msg.header.dest_node_id = local_node_id_;
     msg.header.priority = Priority::NORMAL;
 
     json payload;
@@ -446,7 +446,7 @@ void DistributedSemaphore::sendReleaseMessage(
     msg.payload.assign(payload_str.begin(), payload_str.end());
     msg.header.payload_size = msg.payload.size();
 
-    comm_->sendMessage("COORDINATOR", msg);
+    comm_->sendMessage(local_node_id_, msg);
 }
 
 void DistributedSemaphore::processLocalQueue(std::shared_ptr<LocalSemaphore> semaphore) {
@@ -507,23 +507,6 @@ bool DistributedSemaphore::tryGrantLocal(
     }
 
     return true;
-}
-
-SemaphoreQueuePolicy DistributedSemaphore::parseQueuePolicy(const std::string& policy_str) const {
-    if (policy_str == "FIFO") return SemaphoreQueuePolicy::FIFO;
-    if (policy_str == "PRIORITY") return SemaphoreQueuePolicy::PRIORITY;
-    if (policy_str == "DEADLINE") return SemaphoreQueuePolicy::DEADLINE;
-    return SemaphoreQueuePolicy::FIFO;
-}
-
-ResourceType DistributedSemaphore::parseResourceType(const std::string& type_str) const {
-    if (type_str == "GROUND_STATION") return ResourceType::GROUND_STATION;
-    if (type_str == "RELAY_SATELLITE") return ResourceType::RELAY_SATELLITE;
-    if (type_str == "OBSERVATION_TARGET") return ResourceType::OBSERVATION_TARGET;
-    if (type_str == "COMMUNICATION_LINK") return ResourceType::COMMUNICATION_LINK;
-    if (type_str == "PROCESSING_UNIT") return ResourceType::PROCESSING_UNIT;
-    if (type_str == "STORAGE_SPACE") return ResourceType::STORAGE_SPACE;
-    return ResourceType::UNKNOWN;
 }
 
 std::string DistributedSemaphore::resourceTypeToString(ResourceType type) const {

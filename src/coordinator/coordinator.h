@@ -64,7 +64,6 @@ private:
     void initializeSemaphores();
     void initializeExecutors();
     bool executeTasksForSatellite(const std::string& satellite_id, const std::vector<TaskSegment>& tasks);
-    uint64_t getCurrentTimeMs() const;
 
 private:
     CoordinatorConfig config_;
@@ -78,8 +77,8 @@ private:
     
     std::map<std::string, std::shared_ptr<executor::GenericExecutor>> executors_;
     std::map<std::string, BehaviorNode> behavior_cache_;
+    std::mutex behavior_cache_mutex_;
     std::mutex executors_mutex_;
-    std::mutex console_mutex_;  
     std::mutex task_status_mutex_;
     std::condition_variable task_status_cv_;
     std::map<std::string, bool> satellite_task_results_;

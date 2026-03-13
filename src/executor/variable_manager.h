@@ -3,7 +3,6 @@
 
 #include <map>
 #include <string>
-#include <memory>
 #include <vector>
 #include <stdexcept>
 #include <mutex>
@@ -81,34 +80,22 @@ public:
     void remove(const std::string& name, Scope scope);
     void clearScope(Scope scope);
     void clearLocal() { clearScope(Scope::LOCAL); }
-    void clearIntermediate() { clearScope(Scope::INTERMEDIATE); }
-    void initSystemVars();
     void loadFromGlobalConfig(const std::string& global_json_path);
     void loadFromScheduleConfig(const std::string& schedule_json_path, const std::string& satellite_id = "");
     void setFromParams(const std::map<std::string, std::string>& params, Scope scope);
     std::string createSnapshot(const std::string& description = "");
     bool restoreSnapshot(const std::string& snapshot_id);
-    void clearSnapshots();
-    std::vector<std::string> listSnapshots() const;
     std::map<std::string, VariableValue> getAllVariables(Scope scope) const;
     std::map<std::string, VariableValue> getAllVariables() const; // 合并所有作用域
-    void enableTracking(bool enable) { tracking_enabled_ = enable; }
-    std::vector<std::string> getAccessLog() const { return access_log_; }
-    void clearAccessLog() { access_log_.clear(); }
-    std::string exportToString() const;
-    void importFromString(const std::string& data); 
 private:
     std::map<std::string, VariableValue> global_vars_;
     std::map<std::string, VariableValue> local_vars_;
     std::map<std::string, VariableValue> intermediate_vars_;
     std::map<std::string, VariableSnapshot> snapshots_;
     unsigned int snapshot_counter_;
-    bool tracking_enabled_ = false;
-    mutable std::vector<std::string> access_log_;
     mutable std::mutex mutex_;
     std::map<std::string, VariableValue>& getScopeMap(Scope scope);
     const std::map<std::string, VariableValue>& getScopeMap(Scope scope) const;
-    void logAccess(const std::string& operation, const std::string& name, Scope scope) const;
     std::string generateSnapshotId();
 };
 

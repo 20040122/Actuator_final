@@ -6,6 +6,7 @@
 #include <cstring>
 #include <cerrno>
 #include <algorithm>
+#include <utility>
 #ifdef _WIN32
     #include <winsock2.h>
     #include <ws2tcpip.h>
@@ -30,7 +31,149 @@ using json = nlohmann::json;
 
 namespace coordinator {
 
-// MessageQueue 实现
+namespace {
+
+constexpr uint32_t kMaxFrameSizeBytes = 8 * 1024 * 1024;
+
+std::string makeEndpointNodeId(const std::string& ip, uint16_t port) {
+    std::ostringstream oss;
+    oss << ip << ":" << port;
+    return oss.str();
+}
+
+bool readUint16BE(const std::vector<uint8_t>& data, size_t& pos, uint16_t& out) {
+    if (pos + 2 > data.size()) {
+        return false;
+    }
+    out = static_cast<uint16_t>(data[pos] << 8) |
+          static_cast<uint16_t>(data[pos + 1]);
+    pos += 2;
+    return true;
+}
+
+bool readUint32BE(const std::vector<uint8_t>& data, size_t& pos, uint32_t& out) {
+    if (pos + 4 > data.size()) {
+        return false;
+    }
+    out = (static_cast<uint32_t>(data[pos]) << 24) |
+          (static_cast<uint32_t>(data[pos + 1]) << 16) |
+          (static_cast<uint32_t>(data[pos + 2]) << 8) |
+          static_cast<uint32_t>(data[pos + 3]);
+    pos += 4;
+    return true;
+}
+
+bool readUint64BE(const std::vector<uint8_t>& data, size_t& pos, uint64_t& out) {
+    if (pos + 8 > data.size()) {
+        return false;
+    }
+    out = (static_cast<uint64_t>(data[pos]) << 56) |
+          (static_cast<uint64_t>(data[pos + 1]) << 48) |
+          (static_cast<uint64_t>(data[pos + 2]) << 40) |
+          (static_cast<uint64_t>(data[pos + 3]) << 32) |
+          (static_cast<uint64_t>(data[pos + 4]) << 24) |
+          (static_cast<uint64_t>(data[pos + 5]) << 16) |
+          (static_cast<uint64_t>(data[pos + 6]) << 8) |
+          static_cast<uint64_t>(data[pos + 7]);
+    pos += 8;
+    return true;
+}
+
+bool readString(const std::vector<uint8_t>& data, size_t& pos, uint8_t length, std::string& out) {
+    if (pos + length > data.size()) {
+        return false;
+    }
+    out.assign(reinterpret_cast<const char*>(&data[pos]), length);
+    pos += length;
+    return true;
+}
+
+bool deserializeMessage(const std::vector<uint8_t>& data, Message& out) {
+    out = Message();
+    size_t pos = 0;
+
+    if (!readUint32BE(data, pos, out.header.magic)) {
+        return false;
+    }
+    if (!readUint16BE(data, pos, out.header.version)) {
+        return false;
+    }
+
+    uint16_t msg_type = 0;
+    if (!readUint16BE(data, pos, msg_type)) {
+        return false;
+    }
+    out.header.msg_type = static_cast<MessageType>(msg_type);
+
+    if (!readUint32BE(data, pos, out.header.sequence_id)) {
+        return false;
+    }
+    if (!readUint64BE(data, pos, out.header.timestamp_ms)) {
+        return false;
+    }
+
+    if (pos >= data.size()) {
+        return false;
+    }
+    const uint8_t src_len = data[pos++];
+    if (!readString(data, pos, src_len, out.header.source_node_id)) {
+        return false;
+    }
+
+    if (pos >= data.size()) {
+        return false;
+    }
+    const uint8_t dst_len = data[pos++];
+    if (!readString(data, pos, dst_len, out.header.dest_node_id)) {
+        return false;
+    }
+
+    if (pos >= data.size()) {
+        return false;
+    }
+    const uint8_t priority_raw = data[pos++];
+    if (priority_raw < static_cast<uint8_t>(Priority::EMERGENCY) ||
+        priority_raw > static_cast<uint8_t>(Priority::LOW)) {
+        out.header.priority = Priority::NORMAL;
+    } else {
+        out.header.priority = static_cast<Priority>(priority_raw);
+    }
+
+    if (!readUint32BE(data, pos, out.header.payload_size)) {
+        return false;
+    }
+    if (!readUint32BE(data, pos, out.header.checksum)) {
+        return false;
+    }
+
+    if (out.header.payload_size > data.size() - pos) {
+        return false;
+    }
+
+    out.payload.assign(data.begin() + pos, data.begin() + pos + out.header.payload_size);
+    return true;
+}
+
+bool recvAll(socket_t socket_fd, uint8_t* buffer, size_t length) {
+    size_t total_received = 0;
+    while (total_received < length) {
+        int received = recv(
+            socket_fd,
+            reinterpret_cast<char*>(buffer + total_received),
+            static_cast<int>(length - total_received),
+            0
+        );
+        if (received <= 0) {
+            return false;
+        }
+        total_received += static_cast<size_t>(received);
+    }
+    return true;
+}
+
+} // namespace
+
+// MessageQueue 实锟斤拷
 MessageQueue::MessageQueue(size_t max_size) : max_size_(max_size) {}
 MessageQueue::~MessageQueue() {
     clear();
@@ -81,16 +224,23 @@ void MessageQueue::clear() {
     }
 }
 
-// MessageSerializer 实现
+// MessageSerializer 实锟斤拷
 std::vector<uint8_t> MessageSerializer::serialize(const Message& message) {
-    std::vector<uint8_t> result;
     auto header_data = serializeHeader(message.header);
+    std::vector<uint8_t> result;
+    result.reserve(header_data.size() + message.payload.size());
     result.insert(result.end(), header_data.begin(), header_data.end());
     result.insert(result.end(), message.payload.begin(), message.payload.end());
     return result;
 }
 std::vector<uint8_t> MessageSerializer::serializeHeader(const MessageHeader& header) {
     std::vector<uint8_t> data;
+    const size_t header_size =
+        4 + 2 + 2 + 4 + 8 +
+        1 + header.source_node_id.size() +
+        1 + header.dest_node_id.size() +
+        1 + 4 + 4;
+    data.reserve(header_size);
     data.push_back((header.magic >> 24) & 0xFF);
     data.push_back((header.magic >> 16) & 0xFF);
     data.push_back((header.magic >> 8) & 0xFF);
@@ -205,7 +355,7 @@ std::vector<uint8_t> MessageSerializer::serializeBatchTaskAssign(const BatchTask
     return std::vector<uint8_t>(str.begin(), str.end());
 }
 
-// InterSatComm 实现
+// InterSatComm 实锟斤拷
 InterSatComm::InterSatComm(const CommConfig& config)
     : config_(config)
     , running_(false)
@@ -254,7 +404,7 @@ bool InterSatComm::start() {
     }
     
     running_.store(true);
-    start_time_ms_ = getCurrentTimeMs();
+    start_time_ms_ = ::getCurrentTimeMs();
     
     accept_thread_ = std::unique_ptr<std::thread>(
         new std::thread(&InterSatComm::acceptThreadFunc, this));
@@ -281,6 +431,16 @@ void InterSatComm::stop() {
     if (listen_socket_ != INVALID_SOCKET_VALUE) {
         closesocket(listen_socket_);
         listen_socket_ = INVALID_SOCKET_VALUE;
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(nodes_mutex_);
+        for (auto& pair : nodes_) {
+            if (pair.second.socket_fd != INVALID_SOCKET_VALUE) {
+                closesocket(pair.second.socket_fd);
+                pair.second.socket_fd = INVALID_SOCKET_VALUE;
+            }
+        }
     }
     
     LOG("[InterSatComm] Clearing message queues...");
@@ -324,57 +484,37 @@ void InterSatComm::stop() {
     initialized_.store(false);
 }
 
-bool InterSatComm::connectToNode(const std::string& ip_address, uint16_t port) {
-    RemoteNode node;
-    node.ip_address = ip_address;
-    node.port = port;
-    node.status = NodeStatus::INITIALIZING;
-    node.connect_time_ms = getCurrentTimeMs();
-    
-    if (!connectSocket(ip_address, port, node.socket_fd)) {
+bool InterSatComm::sendMessage(const std::string& dest_node_id, const Message& message) {
+    Message outbound = message;
+    const std::string target_node = dest_node_id.empty() ? outbound.header.dest_node_id : dest_node_id;
+    if (target_node.empty()) {
+        LOG_ERROR("[InterSatComm] sendMessage failed: empty destination");
         return false;
     }
-    
-    addNode(node);
-    return true;
-}
 
-void InterSatComm::disconnectNode(const std::string& node_id) {
-    removeNode(node_id);
-}
-
-bool InterSatComm::getNodeInfo(const std::string& node_id, RemoteNode& info) const {
-    std::lock_guard<std::mutex> lock(nodes_mutex_);
-    auto it = nodes_.find(node_id);
-    if (it != nodes_.end()) {
-        info = it->second;
-        return true;
+    outbound.header.magic = MessageHeader::MAGIC_NUMBER;
+    outbound.header.version = MessageHeader::PROTOCOL_VERSION;
+    outbound.header.dest_node_id = target_node;
+    if (outbound.header.source_node_id.empty()) {
+        outbound.header.source_node_id = config_.node_id;
     }
-    return false;
-}
-
-std::vector<std::string> InterSatComm::getConnectedNodes() const {
-    std::lock_guard<std::mutex> lock(nodes_mutex_);
-    std::vector<std::string> result;
-    for (const auto& pair : nodes_) {
-        result.push_back(pair.first);
+    if (outbound.header.priority != Priority::LOW &&
+        outbound.header.priority != Priority::NORMAL &&
+        outbound.header.priority != Priority::URGENT &&
+        outbound.header.priority != Priority::EMERGENCY) {
+        outbound.header.priority = Priority::NORMAL;
     }
-    return result;
-}
-
-NodeStatus InterSatComm::getNodeStatus(const std::string& node_id) const {
-    std::lock_guard<std::mutex> lock(nodes_mutex_);
-    auto it = nodes_.find(node_id);
-    if (it != nodes_.end()) {
-        return it->second.status;
+    if (outbound.header.timestamp_ms == 0) {
+        outbound.header.timestamp_ms = ::getCurrentTimeMs();
     }
-    return NodeStatus::UNKNOWN;
-}
+    if (outbound.header.sequence_id == 0) {
+        outbound.header.sequence_id = getNextSequenceId();
+    }
+    outbound.header.payload_size = static_cast<uint32_t>(outbound.payload.size());
+    outbound.header.checksum = 0;
 
-bool InterSatComm::sendMessage(const std::string& dest_node_id, const Message& message) {
     MessageHandler handler;
-    std::string target_node = dest_node_id.empty() ? message.header.dest_node_id : dest_node_id;
-    if (!target_node.empty()) {
+    {
         std::lock_guard<std::mutex> lock(local_handlers_mutex_);
         auto it = local_handlers_.find(target_node);
         if (it != local_handlers_.end()) {
@@ -383,14 +523,11 @@ bool InterSatComm::sendMessage(const std::string& dest_node_id, const Message& m
     }
 
     if (handler) {
-        Message copied = message;
-        std::thread([handler, copied]() {
-            handler(copied);
-        }).detach();
+        std::thread(handler, outbound).detach();
         return true;
     }
 
-    return send_queue_.push(message);
+    return send_queue_.push(outbound);
 }
 
 bool InterSatComm::sendBatchTaskAssign(const std::string& dest_node_id, 
@@ -425,9 +562,96 @@ void InterSatComm::acceptThreadFunc() {
 
 void InterSatComm::receiveThreadFunc() {
     while (running_.load()) {
-        Message message;
-        if (recv_queue_.pop(message, 100)) {
-            processReceivedMessage(message);
+        std::vector<std::pair<std::string, socket_t>> node_sockets;
+        {
+            std::lock_guard<std::mutex> lock(nodes_mutex_);
+            node_sockets.reserve(nodes_.size());
+            for (const auto& pair : nodes_) {
+                node_sockets.push_back(std::make_pair(pair.first, pair.second.socket_fd));
+            }
+        }
+
+        if (node_sockets.empty()) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            continue;
+        }
+
+        fd_set read_fds;
+        FD_ZERO(&read_fds);
+        bool has_valid_socket = false;
+        socket_t max_fd = 0;
+        for (const auto& pair : node_sockets) {
+            if (pair.second == INVALID_SOCKET_VALUE) {
+                continue;
+            }
+            has_valid_socket = true;
+            FD_SET(pair.second, &read_fds);
+#ifndef _WIN32
+            if (pair.second > max_fd) {
+                max_fd = pair.second;
+            }
+#endif
+        }
+
+        if (!has_valid_socket) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            continue;
+        }
+
+        timeval timeout;
+        timeout.tv_sec = 0;
+        timeout.tv_usec = 100000;
+
+#ifdef _WIN32
+        const int ready = select(0, &read_fds, nullptr, nullptr, &timeout);
+#else
+        const int ready = select(static_cast<int>(max_fd + 1), &read_fds, nullptr, nullptr, &timeout);
+#endif
+        if (ready <= 0) {
+            continue;
+        }
+
+        std::vector<std::string> failed_nodes;
+        for (const auto& pair : node_sockets) {
+            if (pair.second == INVALID_SOCKET_VALUE || !FD_ISSET(pair.second, &read_fds)) {
+                continue;
+            }
+
+            std::vector<uint8_t> raw_message;
+            if (!receiveData(pair.second, raw_message)) {
+                failed_nodes.push_back(pair.first);
+                continue;
+            }
+
+            Message decoded;
+            if (!deserializeMessage(raw_message, decoded)) {
+                LOG_ERROR("[InterSatComm] Invalid incoming message frame");
+                continue;
+            }
+
+            {
+                std::lock_guard<std::mutex> lock(nodes_mutex_);
+                auto current_it = nodes_.find(pair.first);
+                if (current_it != nodes_.end()) {
+                    current_it->second.messages_received++;
+                    current_it->second.bytes_received += raw_message.size();
+                    current_it->second.last_heartbeat_time_ms = ::getCurrentTimeMs();
+
+                    if (!decoded.header.source_node_id.empty() &&
+                        decoded.header.source_node_id != pair.first) {
+                        RemoteNode updated = current_it->second;
+                        updated.node_id = decoded.header.source_node_id;
+                        nodes_.erase(current_it);
+                        nodes_[updated.node_id] = updated;
+                    }
+                }
+            }
+
+            processReceivedMessage(decoded);
+        }
+
+        for (const auto& node_id : failed_nodes) {
+            removeNode(node_id);
         }
     }
 }
@@ -436,14 +660,31 @@ void InterSatComm::sendThreadFunc() {
     while (running_.load()) {
         Message message;
         if (send_queue_.pop(message, 100)) {
+            socket_t target_socket = INVALID_SOCKET_VALUE;
+            {
+                std::lock_guard<std::mutex> lock(nodes_mutex_);
+                auto it = nodes_.find(message.header.dest_node_id);
+                if (it != nodes_.end()) {
+                    target_socket = it->second.socket_fd;
+                }
+            }
+
+            if (target_socket == INVALID_SOCKET_VALUE) {
+                LOG_WARN("[InterSatComm] Destination node not connected: " + message.header.dest_node_id);
+                continue;
+            }
+
+            auto data = MessageSerializer::serialize(message);
+            if (!sendData(target_socket, data)) {
+                removeNode(message.header.dest_node_id);
+                continue;
+            }
+
             std::lock_guard<std::mutex> lock(nodes_mutex_);
             auto it = nodes_.find(message.header.dest_node_id);
-            if (it != nodes_.end()) {
-                auto data = MessageSerializer::serialize(message);
-                if (sendData(it->second.socket_fd, data)) {
-                    it->second.messages_sent++;
-                    it->second.bytes_sent += data.size();
-                }
+            if (it != nodes_.end() && it->second.socket_fd == target_socket) {
+                it->second.messages_sent++;
+                it->second.bytes_sent += data.size();
             }
         }
     }
@@ -451,14 +692,46 @@ void InterSatComm::sendThreadFunc() {
 
 void InterSatComm::heartbeatThreadFunc() {
     while (running_.load()) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(config_.heartbeat_interval_ms));
-        if (!running_.load()) break;
+        const uint32_t interval_ms = std::max<uint32_t>(config_.heartbeat_interval_ms, 100);
+        uint32_t waited_ms = 0;
+        while (running_.load() && waited_ms < interval_ms) {
+            const uint32_t step_ms = std::min<uint32_t>(100, interval_ms - waited_ms);
+            std::this_thread::sleep_for(std::chrono::milliseconds(step_ms));
+            waited_ms += step_ms;
+        }
+        if (!running_.load()) {
+            break;
+        }
         checkNodeTimeouts();
     }
 }
 
 void InterSatComm::processReceivedMessage(const Message& message) {
-    // 简化的消息处理
+    if (!message.isValid()) {
+        LOG_ERROR("[InterSatComm] Dropping invalid message frame");
+        return;
+    }
+
+    std::vector<MessageHandler> handlers;
+    {
+        std::lock_guard<std::mutex> lock(local_handlers_mutex_);
+        if (message.isBroadcast()) {
+            for (const auto& pair : local_handlers_) {
+                handlers.push_back(pair.second);
+            }
+        } else {
+            auto it = local_handlers_.find(message.header.dest_node_id);
+            if (it != local_handlers_.end()) {
+                handlers.push_back(it->second);
+            }
+        }
+    }
+
+    for (const auto& handler : handlers) {
+        if (handler) {
+            handler(message);
+        }
+    }
 }
 
 void InterSatComm::addNode(const RemoteNode& node) {
@@ -479,12 +752,12 @@ void InterSatComm::updateNodeHeartbeat(const std::string& node_id) {
     std::lock_guard<std::mutex> lock(nodes_mutex_);
     auto it = nodes_.find(node_id);
     if (it != nodes_.end()) {
-        it->second.last_heartbeat_time_ms = getCurrentTimeMs();
+        it->second.last_heartbeat_time_ms = ::getCurrentTimeMs();
     }
 }
 
 void InterSatComm::checkNodeTimeouts() {
-    uint64_t now = getCurrentTimeMs();
+    uint64_t now = ::getCurrentTimeMs();
     std::vector<std::string> timed_out_nodes;
     
     {
@@ -509,7 +782,7 @@ Message InterSatComm::buildMessage(MessageType type,
     msg.header.version = MessageHeader::PROTOCOL_VERSION;
     msg.header.msg_type = type;
     msg.header.sequence_id = getNextSequenceId();
-    msg.header.timestamp_ms = getCurrentTimeMs();
+    msg.header.timestamp_ms = ::getCurrentTimeMs();
     msg.header.source_node_id = config_.node_id;
     msg.header.dest_node_id = dest_node_id;
     msg.header.priority = Priority::NORMAL;
@@ -522,11 +795,6 @@ Message InterSatComm::buildMessage(MessageType type,
 
 uint32_t InterSatComm::getNextSequenceId() {
     return sequence_id_.fetch_add(1);
-}
-
-uint64_t InterSatComm::getCurrentTimeMs() const {
-    return std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::system_clock::now().time_since_epoch()).count();
 }
 
 bool InterSatComm::initializeSocket() {
@@ -594,7 +862,9 @@ bool InterSatComm::acceptConnection(RemoteNode& node) {
     node.socket_fd = client_socket;
     node.ip_address = inet_ntoa(client_addr.sin_addr);
     node.port = ntohs(client_addr.sin_port);
-    node.connect_time_ms = getCurrentTimeMs();
+    node.node_id = makeEndpointNodeId(node.ip_address, node.port);
+    node.connect_time_ms = ::getCurrentTimeMs();
+    node.last_heartbeat_time_ms = node.connect_time_ms;
     node.status = NodeStatus::INITIALIZING;
     
     return true;
@@ -622,32 +892,64 @@ bool InterSatComm::connectSocket(const std::string& ip, uint16_t port, socket_t&
 }
 
 bool InterSatComm::sendData(socket_t socket_fd, const std::vector<uint8_t>& data) {
-    size_t total_sent = 0;
-    while (total_sent < data.size()) {
-        int sent = send(socket_fd, 
-                       reinterpret_cast<const char*>(data.data() + total_sent),
-                       static_cast<int>(data.size() - total_sent), 
-                       0);
-        
-        if (sent == SOCKET_ERROR) {
-            return false;
-        }
-        
-        total_sent += sent;
+    if (data.empty() || data.size() > kMaxFrameSizeBytes) {
+        return false;
     }
-    
+
+    const uint32_t frame_size = static_cast<uint32_t>(data.size());
+    uint8_t frame_header[4];
+    frame_header[0] = static_cast<uint8_t>((frame_size >> 24) & 0xFF);
+    frame_header[1] = static_cast<uint8_t>((frame_size >> 16) & 0xFF);
+    frame_header[2] = static_cast<uint8_t>((frame_size >> 8) & 0xFF);
+    frame_header[3] = static_cast<uint8_t>(frame_size & 0xFF);
+
+    auto send_all = [socket_fd](const uint8_t* buffer, size_t length) -> bool {
+        size_t total_sent = 0;
+        while (total_sent < length) {
+            int sent = send(
+                socket_fd,
+                reinterpret_cast<const char*>(buffer + total_sent),
+                static_cast<int>(length - total_sent),
+                0
+            );
+            if (sent <= 0) {
+                return false;
+            }
+            total_sent += static_cast<size_t>(sent);
+        }
+        return true;
+    };
+
+    if (!send_all(frame_header, sizeof(frame_header))) {
+        return false;
+    }
+    if (!send_all(data.data(), data.size())) {
+        return false;
+    }
+
     return true;
 }
 
 bool InterSatComm::receiveData(socket_t socket_fd, std::vector<uint8_t>& data) {
-    uint8_t buffer[4096];
-    int received = recv(socket_fd, reinterpret_cast<char*>(buffer), sizeof(buffer), 0);
-    
-    if (received <= 0) {
+    uint8_t frame_header[4];
+    if (!recvAll(socket_fd, frame_header, sizeof(frame_header))) {
         return false;
     }
-    
-    data.assign(buffer, buffer + received);
+
+    const uint32_t frame_size = (static_cast<uint32_t>(frame_header[0]) << 24) |
+                                (static_cast<uint32_t>(frame_header[1]) << 16) |
+                                (static_cast<uint32_t>(frame_header[2]) << 8) |
+                                static_cast<uint32_t>(frame_header[3]);
+    if (frame_size == 0 || frame_size > kMaxFrameSizeBytes) {
+        LOG_ERROR("[InterSatComm] Invalid frame size: " + std::to_string(frame_size));
+        return false;
+    }
+
+    data.resize(frame_size);
+    if (!recvAll(socket_fd, data.data(), data.size())) {
+        data.clear();
+        return false;
+    }
     return true;
 }
 

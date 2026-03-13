@@ -111,32 +111,12 @@ public:
     
     ExecutionResult executeTask(const TaskSegment& task, const BehaviorNode& behavior);
     
-    std::future<ExecutionResult> executeTaskAsync(
-        const TaskSegment& task,
-        const BehaviorNode& behavior,
-        TaskCallback callback = nullptr
-    );
-    
-    bool cancelTask(const std::string& segment_id);
-    bool isTaskRunning(const std::string& segment_id) const;
-    
     bool isRunning() const { return running_.load(); }
-    bool isBusy() const;
-    size_t getPendingTaskCount() const;
-    size_t getActiveTaskCount() const;
     
     VariableManager& getVariableManager() { return var_mgr_; }
     const VariableManager& getVariableManager() const { return var_mgr_; }
-    ConstraintEvaluator& getConstraintEvaluator() { return evaluator_; }
-    CommandStateManager& getStateManager() { return state_mgr_; }
     
     void setDistributedSemaphore(std::shared_ptr<coordinator::DistributedSemaphore> sem_mgr);
-    
-    void setDebugMode(bool enabled);
-    bool getDebugMode() const { return config_.debug_mode; }
-    const ExecutorConfig& getConfig() const { return config_; }
-    
-    void printVariableStatus() const;
 
 private:
     ExecutorConfig config_;
@@ -161,6 +141,7 @@ private:
     
     std::unordered_map<std::string, std::shared_ptr<ExecutionContext>> active_contexts_;
     mutable std::mutex contexts_mutex_;
+    mutable std::mutex runtime_mutex_;
     
     void workerLoop();
     
@@ -177,7 +158,7 @@ private:
         std::shared_ptr<ExecutionContext> ctx
     );
     
-    ExecutionResult executeAction(const BehaviorNode& node, std::shared_ptr<ExecutionContext> ctx);
+    ExecutionResult executeAction(const BehaviorNode& node);
     ExecutionResult executeCondition(const BehaviorNode& node);
     ExecutionResult executeSequence(const BehaviorNode& node, std::shared_ptr<ExecutionContext> ctx);
     ExecutionResult executeSelector(const BehaviorNode& node, std::shared_ptr<ExecutionContext> ctx);

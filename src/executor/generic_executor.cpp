@@ -106,7 +106,11 @@ ExecutionResult GenericExecutor::executeTask(const TaskSegment& task,
         active_contexts_[task.segment_id] = ctx;
     }
     
-    auto result = executeTaskInternal(task, behavior, ctx);
+    ExecutionResult result;
+    {
+        std::lock_guard<std::mutex> lock(runtime_mutex_);
+        result = executeTaskInternal(task, behavior, ctx);
+    }
     
     {
         std::lock_guard<std::mutex> lock(contexts_mutex_);
@@ -116,109 +120,8 @@ ExecutionResult GenericExecutor::executeTask(const TaskSegment& task,
     return result;
 }
 
-std::future<ExecutionResult> GenericExecutor::executeTaskAsync(
-    const TaskSegment& task,
-    const BehaviorNode& behavior,
-    TaskCallback callback) {
-    
-    auto promise = std::make_shared<std::promise<ExecutionResult>>();
-    auto future = promise->get_future();
-    
-    if (!running_.load()) {
-        promise->set_value(ExecutionResult::Failure("执行器未运行"));
-        return future;
-    }
-    
-    if (!config_.async_mode) {
-        auto result = executeTask(task, behavior);
-        promise->set_value(result);
-        if (callback) {
-            callback(task.segment_id, result);
-        }
-        return future;
-    }
-    
-    {
-        std::lock_guard<std::mutex> lock(queue_mutex_);
-        PendingTask pending;
-        pending.task = task;
-        pending.behavior = behavior;
-        pending.promise = promise;
-        pending.callback = callback;
-        task_queue_.push(std::move(pending));
-    }
-    queue_cv_.notify_one();
-    
-    return future;
-}
-
-bool GenericExecutor::cancelTask(const std::string& segment_id) {
-    std::lock_guard<std::mutex> lock(contexts_mutex_);
-    auto it = active_contexts_.find(segment_id);
-    if (it != active_contexts_.end()) {
-        it->second->cancelled.store(true);
-        log("INFO", "任务取消请求: " + segment_id);
-        return true;
-    }
-    return false;
-}
-
-bool GenericExecutor::isTaskRunning(const std::string& segment_id) const {
-    std::lock_guard<std::mutex> lock(contexts_mutex_);
-    return active_contexts_.find(segment_id) != active_contexts_.end();
-}
-
-bool GenericExecutor::isBusy() const {
-    std::lock_guard<std::mutex> lock(contexts_mutex_);
-    return !active_contexts_.empty();
-}
-
-size_t GenericExecutor::getPendingTaskCount() const {
-    std::lock_guard<std::mutex> lock(queue_mutex_);
-    return task_queue_.size();
-}
-
-size_t GenericExecutor::getActiveTaskCount() const {
-    std::lock_guard<std::mutex> lock(contexts_mutex_);
-    return active_contexts_.size();
-}
-
-void GenericExecutor::setDebugMode(bool enabled) {
-    config_.debug_mode = enabled;
-    evaluator_.enableDebug(enabled);
-}
-
 void GenericExecutor::setDistributedSemaphore(std::shared_ptr<coordinator::DistributedSemaphore> sem_mgr) {
     distributed_sem_mgr_ = sem_mgr;
-}
-
-void GenericExecutor::printVariableStatus() const {
-    std::ostringstream oss;
-    oss << "========== 变量状态 ==========\n";
-
-    auto global_vars = var_mgr_.getAllVariables(Scope::GLOBAL);
-    oss << "[全局变量]\n";
-    for (const auto& pair : global_vars) {
-        oss << "  " << pair.first << " = " << pair.second.asString() << "\n";
-    }
-
-    auto local_vars = var_mgr_.getAllVariables(Scope::LOCAL);
-    if (!local_vars.empty()) {
-        oss << "[局部变量]\n";
-        for (const auto& pair : local_vars) {
-            oss << "  " << pair.first << " = " << pair.second.asString() << "\n";
-        }
-    }
-
-    auto inter_vars = var_mgr_.getAllVariables(Scope::INTERMEDIATE);
-    if (!inter_vars.empty()) {
-        oss << "[中间变量]\n";
-        for (const auto& pair : inter_vars) {
-            oss << "  " << pair.first << " = " << pair.second.asString() << "\n";
-        }
-    }
-
-    LOG(oss.str());
 }
 
 void GenericExecutor::workerLoop() {
@@ -382,7 +285,7 @@ ExecutionResult GenericExecutor::executeNode(
     
     switch (node.type) {
         case NodeType::ACTION:
-            result = executeAction(node, ctx);
+            result = executeAction(node);
             break;
             
         case NodeType::CONDITION:
@@ -415,8 +318,7 @@ ExecutionResult GenericExecutor::executeNode(
     return result;
 }
 
-ExecutionResult GenericExecutor::executeAction(const BehaviorNode& node, 
-                                                std::shared_ptr<ExecutionContext> ctx) {
+ExecutionResult GenericExecutor::executeAction(const BehaviorNode& node) {
     log("DEBUG", "执行动作: " + node.command);
     
     for (const auto& param : node.params) {

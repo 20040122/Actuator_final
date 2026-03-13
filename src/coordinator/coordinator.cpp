@@ -486,6 +486,10 @@ void Coordinator::initializeMessageRouters() {
     coordinator_message_router_[MessageType::TASK_COMPLETE] = [this](const Message& message) {
         onCoordinatorTaskComplete(message);
     };
+    // Semaphore messages are handled locally by the shared semaphore_mgr_;
+    // these entries suppress "unregistered message type" warnings.
+    coordinator_message_router_[MessageType::SEM_ACQUIRE_REQUEST] = [](const Message&) {};
+    coordinator_message_router_[MessageType::SEM_RELEASE] = [](const Message&) {};
 
     satellite_message_router_[MessageType::BATCH_TASK_ASSIGN] =
         [this](const std::string& satellite_id, const Message& message) {
@@ -539,17 +543,40 @@ void Coordinator::onCoordinatorBatchAck(const Message& message) {
         return;
     }
 
+    bool tracked_satellite = false;
+    bool satellite_success = ack.accepted;
+    int expected_task_count = 0;
     {
         std::lock_guard<std::mutex> lock(task_status_mutex_);
-        satellite_task_finished_[ack.satellite_id] = true;
-        satellite_task_results_[ack.satellite_id] = ack.accepted;
+        auto expected_it = satellite_task_expected_counts_.find(ack.satellite_id);
+        if (expected_it != satellite_task_expected_counts_.end()) {
+            tracked_satellite = true;
+            expected_task_count = expected_it->second;
+            const int processed_task_count =
+                static_cast<int>(ack.accepted_task_ids.size() + ack.rejected_task_ids.size());
+            if (expected_task_count > 0 &&
+                processed_task_count > 0 &&
+                processed_task_count != expected_task_count) {
+                satellite_success = false;
+            }
+            satellite_task_finished_[ack.satellite_id] = true;
+            satellite_task_results_[ack.satellite_id] = satellite_success;
+        }
+    }
+
+    if (!tracked_satellite) {
+        LOG_WARN("[Coordinator] 收到未跟踪卫星的ACK: " + ack.satellite_id);
+        return;
     }
     task_status_cv_.notify_all();
 
     {
         std::ostringstream oss;
         oss << "[Coordinator] 收到ACK: " << ack.satellite_id
-            << " -> " << (ack.accepted ? "SUCCESS" : "FAILED");
+            << " -> " << (satellite_success ? "SUCCESS" : "FAILED")
+            << " (accepted=" << ack.accepted_task_ids.size()
+            << ", rejected=" << ack.rejected_task_ids.size()
+            << ", expected=" << expected_task_count << ")";
         LOG(oss.str());
     }
 }
@@ -613,7 +640,7 @@ void Coordinator::onSatelliteBatchTaskAssign(const std::string& satellite_id, co
     ack.message_id = "";
     ack.satellite_id = satellite_id;
     ack.node_id = satellite_id;
-    ack.timestamp = getCurrentTimeMs();
+    ack.timestamp = ::getCurrentTimeMs();
     ack.accepted = false;
 
     if (!parseBatchTaskAssignPayload(message.payload, batch_msg)) {
@@ -642,7 +669,7 @@ void Coordinator::onSatelliteBatchTaskAssign(const std::string& satellite_id, co
             progress_msg.header.source_node_id = satellite_id;
             progress_msg.header.dest_node_id = config_.coordinator_id;
             progress_msg.header.priority = Priority::NORMAL;
-            progress_msg.header.timestamp_ms = getCurrentTimeMs();
+            progress_msg.header.timestamp_ms = ::getCurrentTimeMs();
             progress_msg.payload = serializeTaskProgressPayload(progress);
             progress_msg.header.payload_size = static_cast<uint32_t>(progress_msg.payload.size());
             progress_msg.header.checksum = 0;
@@ -668,7 +695,7 @@ void Coordinator::onSatelliteBatchTaskAssign(const std::string& satellite_id, co
             complete_msg.header.source_node_id = satellite_id;
             complete_msg.header.dest_node_id = config_.coordinator_id;
             complete_msg.header.priority = task_ok ? Priority::NORMAL : Priority::URGENT;
-            complete_msg.header.timestamp_ms = getCurrentTimeMs();
+            complete_msg.header.timestamp_ms = ::getCurrentTimeMs();
             complete_msg.payload = serializeTaskCompletePayload(complete);
             complete_msg.header.payload_size = static_cast<uint32_t>(complete_msg.payload.size());
             complete_msg.header.checksum = 0;
@@ -692,7 +719,7 @@ void Coordinator::onSatelliteBatchTaskAssign(const std::string& satellite_id, co
     ack_message.header.source_node_id = satellite_id;
     ack_message.header.dest_node_id = config_.coordinator_id;
     ack_message.header.priority = Priority::NORMAL;
-    ack_message.header.timestamp_ms = getCurrentTimeMs();
+    ack_message.header.timestamp_ms = ::getCurrentTimeMs();
     ack_message.payload = serializeBatchTaskAssignAckPayload(ack);
     ack_message.header.payload_size = static_cast<uint32_t>(ack_message.payload.size());
     ack_message.header.checksum = 0;
@@ -761,21 +788,24 @@ bool Coordinator::distributeAllTasks(const ScheduleParser::MultiSatSchedule& sch
             continue;
         }
         
-        std::cout << "\n[Coordinator] === 卫星 " << sat_id << " (" << node_it->name << ") ===" << std::endl;
-        std::cout << "[Coordinator]   节点ID: " << node_it->node_id << std::endl;
-        std::cout << "[Coordinator]   任务数量: " << tasks.size() << std::endl;
-        std::cout << "[Coordinator]   载荷状态: " << node_it->payload_status << std::endl;
-        std::cout << "[Coordinator]   电池电量: " << node_it->battery_percent << "%" << std::endl;
-        std::cout << "[Coordinator]   可用存储: " << node_it->storage_available_mb << " MB" << std::endl;
+        {
+            std::ostringstream oss;
+            oss << "[Coordinator] 分发任务 -> " << sat_id
+                << " (" << node_it->name << "), tasks=" << tasks.size()
+                << ", battery=" << node_it->battery_percent << "%"
+                << ", storage=" << node_it->storage_available_mb << "MB";
+            LOG(oss.str());
+        }
         
         BatchTaskAssignMessage msg;
-        msg.message_id = "BATCH_" + sat_id + "_" + std::to_string(getCurrentTimeMs());
+        msg.message_id = "BATCH_" + sat_id + "_" + std::to_string(::getCurrentTimeMs());
         msg.satellite_id = sat_id;
         msg.node_id = node_it->node_id;
         msg.plan_id = schedule.plan_id;
-        msg.timestamp = getCurrentTimeMs();
+        msg.timestamp = ::getCurrentTimeMs();
+        msg.require_ack = true;
+        msg.ack_timeout_ms = 60000;
         
-        std::cout << "[Coordinator]   调度任务列表:" << std::endl;
         int task_num = 0;
         for (const auto& task : tasks) {
             task_num++;
@@ -797,26 +827,28 @@ bool Coordinator::distributeAllTasks(const ScheduleParser::MultiSatSchedule& sch
             task_msg.window.end = task.window.end;
             
             msg.scheduled_tasks.push_back(task_msg);
-            
-            // 打印详细任务信息
-            std::cout << "[Coordinator]     [" << task_num << "] 任务ID: " << task.task_id << std::endl;
-            std::cout << "[Coordinator]         段ID: " << task.segment_id << std::endl;
-            std::cout << "[Coordinator]         行为: " << task.behavior_ref << std::endl;
-            std::cout << "[Coordinator]         时间窗: " << task.window.start << " ~ " << task.window.end << std::endl;
-            std::cout << "[Coordinator]         执行: " << task.execution.planned_start << " ~ " 
-                      << task.execution.planned_end << " (时长: " << task.execution.duration_s << "s)" << std::endl;
-            
-            // 打印行为参数
+
+            std::ostringstream task_debug;
+            task_debug << "[Coordinator][Dispatch] [" << task_num << "/" << tasks.size() << "] "
+                       << "task=" << task.task_id
+                       << ", segment=" << task.segment_id
+                       << ", behavior=" << task.behavior_ref
+                       << ", window=" << task.window.start << "~" << task.window.end
+                       << ", exec=" << task.execution.planned_start << "~" << task.execution.planned_end
+                       << ", duration=" << task.execution.duration_s << "s";
             if (!task.behavior_params.empty()) {
-                std::cout << "[Coordinator]         参数: ";
+                task_debug << ", params={";
                 bool first = true;
                 for (const auto& param : task.behavior_params) {
-                    if (!first) std::cout << ", ";
-                    std::cout << param.first << "=" << param.second;
+                    if (!first) {
+                        task_debug << ", ";
+                    }
+                    task_debug << param.first << "=" << param.second;
                     first = false;
                 }
-                std::cout << std::endl;
+                task_debug << "}";
             }
+            LOG_DEBUG(task_debug.str());
         }
         
         Message message;
@@ -824,14 +856,14 @@ bool Coordinator::distributeAllTasks(const ScheduleParser::MultiSatSchedule& sch
         message.header.source_node_id = config_.coordinator_id;
         message.header.dest_node_id = sat_id;
         message.header.priority = Priority::NORMAL;
-        message.header.timestamp_ms = getCurrentTimeMs();
+        message.header.timestamp_ms = ::getCurrentTimeMs();
         message.payload = MessageSerializer::serializeBatchTaskAssign(msg);
         
         if (comm_->sendMessage(sat_id, message)) {
-            std::cout << "[Coordinator]   ✓ 任务分发成功: " << tasks.size() << " 个任务已发送到 " << sat_id << std::endl;
+            LOG("[Coordinator] 任务分发成功: " + sat_id + ", count=" + std::to_string(tasks.size()));
             success_count += tasks.size();
         } else {
-            std::cerr << "[Coordinator]   ✗ 任务分发失败: " << sat_id << std::endl;
+            LOG_ERROR("[Coordinator] 任务分发失败: " + sat_id);
         }
     }
     
@@ -931,10 +963,10 @@ bool Coordinator::executeTasksForSatellite(const std::string& satellite_id, cons
     
     {
         std::ostringstream oss;
-        oss << "\n[Coordinator] === 执行卫星任务: " << satellite_id << " (" << node_it->name << ") ===";
-        oss << "\n[Coordinator]   任务数量: " << tasks.size();
-        oss << "\n[Coordinator]   载荷状态: " << node_it->payload_status;
-        oss << "\n[Coordinator]   电池电量: " << node_it->battery_percent << "%";
+        oss << "[Coordinator] 执行卫星任务: " << satellite_id
+            << " (" << node_it->name << "), task_count=" << tasks.size()
+            << ", payload=" << node_it->payload_status
+            << ", battery=" << node_it->battery_percent << "%";
         LOG(oss.str());
     }
     
@@ -946,20 +978,29 @@ bool Coordinator::executeTasksForSatellite(const std::string& satellite_id, cons
         task_num++;
         {
             std::ostringstream oss;
-            oss << "\n[Coordinator]   [" << task_num << "/" << tasks.size() << "] 执行任务: " << task.task_id;
-            oss << "\n[Coordinator]       段ID: " << task.segment_id;
-            oss << "\n[Coordinator]       行为: " << task.behavior_ref;
-            oss << "\n[Coordinator]       时间窗: " << task.window.start << " ~ " << task.window.end;
-            LOG(oss.str());
+            oss << "[Coordinator][Execute] [" << task_num << "/" << tasks.size() << "] "
+                << "task=" << task.task_id
+                << ", segment=" << task.segment_id
+                << ", behavior=" << task.behavior_ref
+                << ", window=" << task.window.start << "~" << task.window.end;
+            LOG_DEBUG(oss.str());
         }
         
         BehaviorNode behavior;
-        auto cache_it = behavior_cache_.find(task.behavior_ref);
-        if (cache_it != behavior_cache_.end()) {
-            behavior = cache_it->second;
-        } else {
+        bool behavior_loaded = false;
+        {
+            std::lock_guard<std::mutex> lock(behavior_cache_mutex_);
+            auto cache_it = behavior_cache_.find(task.behavior_ref);
+            if (cache_it != behavior_cache_.end()) {
+                behavior = cache_it->second;
+                behavior_loaded = true;
+            }
+        }
+
+        if (!behavior_loaded) {
             try {
                 behavior = behavior_parser.parseBehaviorDefinition("src/input/behaviorTree.json", task.behavior_ref);
+                std::lock_guard<std::mutex> lock(behavior_cache_mutex_);
                 behavior_cache_[task.behavior_ref] = behavior;
             } catch (const std::exception& e) {
                 LOG_ERROR(std::string("[Coordinator]       ✗ 行为加载失败: ") + e.what());
@@ -972,14 +1013,21 @@ bool Coordinator::executeTasksForSatellite(const std::string& satellite_id, cons
         {
             std::ostringstream oss;
             if (result.success) {
-                oss << "[Coordinator]       ✓ 任务执行成功 (耗时: " << result.execution_time_ms << "ms)";
+                oss << "[Coordinator][Execute] success task=" << task.task_id
+                    << ", elapsed=" << result.execution_time_ms << "ms";
                 if (!result.outputs.empty()) {
-                    oss << "\n[Coordinator]       输出参数:";
+                    oss << ", outputs={";
+                    bool first = true;
                     for (const auto& out : result.outputs) {
-                        oss << "\n[Coordinator]         " << out.first << " = " << out.second.asString();
+                        if (!first) {
+                            oss << ", ";
+                        }
+                        oss << out.first << "=" << out.second.asString();
+                        first = false;
                     }
+                    oss << "}";
                 }
-                LOG(oss.str());
+                LOG_DEBUG(oss.str());
                 success_count++;
             } else {
                 oss << "[Coordinator]       ✗ 任务执行失败: " << result.message;
@@ -997,12 +1045,6 @@ bool Coordinator::executeTasksForSatellite(const std::string& satellite_id, cons
         LOG(oss.str());
     }
     return success_count == tasks.size();
-}
-
-uint64_t Coordinator::getCurrentTimeMs() const {
-    auto now = std::chrono::system_clock::now();
-    auto duration = now.time_since_epoch();
-    return std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
 }
 
 }

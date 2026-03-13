@@ -14,6 +14,7 @@
 #include <functional>
 
 #include "message_types.h"
+#include "../core/types.h"
 
 // 平台相关的 socket 类型定义
 #ifdef _WIN32
@@ -130,12 +131,6 @@ public:
     void stop();
     bool isRunning() const { return running_.load(); }
     
-    bool connectToNode(const std::string& ip_address, uint16_t port);
-    void disconnectNode(const std::string& node_id);
-    bool getNodeInfo(const std::string& node_id, RemoteNode& info) const;
-    std::vector<std::string> getConnectedNodes() const;
-    NodeStatus getNodeStatus(const std::string& node_id) const;
-    
     bool sendMessage(const std::string& dest_node_id, const Message& message);
     bool sendBatchTaskAssign(const std::string& dest_node_id, const BatchTaskAssignMessage& batch_tasks);
     void registerLocalHandler(const std::string& node_id, MessageHandler handler);
@@ -156,7 +151,6 @@ private:
     Message buildMessage(MessageType type, const std::string& dest_node_id,
                          const std::vector<uint8_t>& payload);
     uint32_t getNextSequenceId();
-    uint64_t getCurrentTimeMs() const;
     bool initializeSocket();
     void cleanupSocket();
     bool bindSocket();
