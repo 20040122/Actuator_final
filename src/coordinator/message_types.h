@@ -290,40 +290,6 @@ struct BarrierReleaseMessage {
     std::string     release_reason;     
 };
 
-struct SemaphoreAcquireRequest {
-    std::string     request_id;         
-    std::string     node_id;           
-    std::string     semaphore_id;       
-    std::string     task_id;            
-    Priority        priority;           
-    int             timeout_ms;         
-    bool            blocking;           
-};
-
-struct SemaphoreAcquireResponse {
-    std::string     request_id;         
-    std::string     semaphore_id;       
-    bool            granted;            
-    bool            queued;             
-    int             queue_position;     
-    int             estimated_wait_ms;  
-    uint64_t        grant_token;        
-    std::string     deny_reason;        
-};
-
-struct SemaphoreReleaseMessage {
-    std::string     node_id;            
-    std::string     semaphore_id;       
-    uint64_t        grant_token;        
-    std::string     task_id;            
-};
-
-struct SemaphoreReleaseAck {
-    std::string     semaphore_id;       
-    bool            success;           
-    int             available_permits;  
-};
-
 struct SemaphoreStatusQuery {
     std::string     requester_id;       
     std::vector<std::string> semaphore_ids;  

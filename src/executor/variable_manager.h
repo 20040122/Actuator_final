@@ -77,7 +77,6 @@ public:
     VariableValue get(const std::string& name) const;
     bool exists(const std::string& name) const;
     bool exists(const std::string& name, Scope scope) const;
-    void remove(const std::string& name, Scope scope);
     void clearScope(Scope scope);
     void clearLocal() { clearScope(Scope::LOCAL); }
     void loadFromGlobalConfig(const std::string& global_json_path);
@@ -85,8 +84,6 @@ public:
     void setFromParams(const std::map<std::string, std::string>& params, Scope scope);
     std::string createSnapshot(const std::string& description = "");
     bool restoreSnapshot(const std::string& snapshot_id);
-    std::map<std::string, VariableValue> getAllVariables(Scope scope) const;
-    std::map<std::string, VariableValue> getAllVariables() const; // 合并所有作用域
 private:
     std::map<std::string, VariableValue> global_vars_;
     std::map<std::string, VariableValue> local_vars_;

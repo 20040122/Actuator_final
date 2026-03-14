@@ -143,7 +143,6 @@ private:
     std::string local_node_id_;
     std::map<std::string, std::shared_ptr<LocalSemaphore>> semaphores_;
     std::map<std::string, PendingRequest> pending_requests_;
-    std::map<std::string, std::vector<std::string>> owner_semaphore_map_;
     std::map<std::string, uint64_t> request_to_grant_token_;
     mutable std::mutex global_mutex_;
     std::atomic<bool> running_;

@@ -253,14 +253,6 @@ bool DistributedSemaphore::releaseByGrantToken(
         request_to_grant_token_.erase(request_id);
     }
 
-    {
-        auto& owner_sems = owner_semaphore_map_[owner];
-        auto erase_it = std::find(owner_sems.begin(), owner_sems.end(), semaphore_id);
-        if (erase_it != owner_sems.end()) {
-            owner_sems.erase(erase_it);
-        }
-    }
-
     const int available = semaphore->getAvailablePermits();
     const int allocated = semaphore->getAllocatedPermits();
     std::ostringstream oss;
@@ -331,14 +323,6 @@ bool DistributedSemaphore::releaseByRequestId(
         request_to_grant_token_.erase(request_id);
     }
 
-    {
-        auto& owner_sems = owner_semaphore_map_[owner];
-        auto erase_it = std::find(owner_sems.begin(), owner_sems.end(), semaphore_id);
-        if (erase_it != owner_sems.end()) {
-            owner_sems.erase(erase_it);
-        }
-    }
-
     const int available = semaphore->getAvailablePermits();
     const int allocated = semaphore->getAllocatedPermits();
     std::ostringstream oss;
@@ -373,7 +357,6 @@ void DistributedSemaphore::clear() {
 
     semaphores_.clear();
     pending_requests_.clear();
-    owner_semaphore_map_.clear();
     request_to_grant_token_.clear();
 
     LOG("[DistributedSemaphore] Cleared");
@@ -500,7 +483,6 @@ bool DistributedSemaphore::tryGrantLocal(
     holder.priority = request.priority;
 
     semaphore->holders.push_back(holder);
-    owner_semaphore_map_[request.owner_id].push_back(request.semaphore_id);
     request_to_grant_token_[request.request_id] = holder.grant_token;
     if (out_grant_token) {
         *out_grant_token = holder.grant_token;

@@ -5,7 +5,6 @@
 #include <vector>
 #include <map>
 #include <mutex>
-#include <chrono>
 #include <cstdint>
 #include "message_types.h"
 #include "../core/types.h"
@@ -29,7 +28,7 @@ struct NodeInfo {
 
 class NodeRegistry {
 public:
-    explicit NodeRegistry(uint64_t heartbeat_timeout_ms = 30000);
+    NodeRegistry();
     ~NodeRegistry();
     
     NodeRegistry(const NodeRegistry&) = delete;
@@ -45,11 +44,7 @@ public:
     std::vector<std::string> getAllNodeIds() const;
 
 private:
-    void notifyNodeRegistered(const std::string& node_id);
-    void notifyNodeUnregistered(const std::string& node_id, const std::string& reason);
-    
     std::map<std::string, NodeInfo> nodes_;
-    uint64_t heartbeat_timeout_ms_;
     mutable std::mutex mutex_;
     bool initialized_;
 };

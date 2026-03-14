@@ -1,7 +1,6 @@
 #include "generic_executor.h"
 #include "../parser/behavior_parser.h"
 #include "../coordinator/distributed_semaphore.h"
-#include <iostream>
 #include <sstream>
 #include <chrono>
 

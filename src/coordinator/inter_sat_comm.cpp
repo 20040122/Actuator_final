@@ -363,9 +363,7 @@ InterSatComm::InterSatComm(const CommConfig& config)
     , send_queue_(config.message_queue_size)
     , recv_queue_(config.message_queue_size)
     , sequence_id_(0)
-    , start_time_ms_(0)
-    , listen_socket_(INVALID_SOCKET_VALUE)
-    , local_status_(NodeStatus::INITIALIZING) {
+    , listen_socket_(INVALID_SOCKET_VALUE) {
 }
 
 InterSatComm::~InterSatComm() {
@@ -404,7 +402,6 @@ bool InterSatComm::start() {
     }
     
     running_.store(true);
-    start_time_ms_ = ::getCurrentTimeMs();
     
     accept_thread_ = std::unique_ptr<std::thread>(
         new std::thread(&InterSatComm::acceptThreadFunc, this));
@@ -866,27 +863,6 @@ bool InterSatComm::acceptConnection(RemoteNode& node) {
     node.connect_time_ms = ::getCurrentTimeMs();
     node.last_heartbeat_time_ms = node.connect_time_ms;
     node.status = NodeStatus::INITIALIZING;
-    
-    return true;
-}
-
-bool InterSatComm::connectSocket(const std::string& ip, uint16_t port, socket_t& socket_fd) {
-    socket_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if (socket_fd == INVALID_SOCKET_VALUE) {
-        return false;
-    }
-    
-    sockaddr_in addr;
-    memset(&addr, 0, sizeof(addr));
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(port);
-    addr.sin_addr.s_addr = inet_addr(ip.c_str());
-    
-    if (connect(socket_fd, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) == SOCKET_ERROR) {
-        closesocket(socket_fd);
-        socket_fd = INVALID_SOCKET_VALUE;
-        return false;
-    }
     
     return true;
 }

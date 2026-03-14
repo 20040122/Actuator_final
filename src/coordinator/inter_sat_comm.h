@@ -155,7 +155,6 @@ private:
     void cleanupSocket();
     bool bindSocket();
     bool acceptConnection(RemoteNode& node);
-    bool connectSocket(const std::string& ip, uint16_t port, socket_t& socket_fd);
     bool sendData(socket_t socket_fd, const std::vector<uint8_t>& data);
     bool receiveData(socket_t socket_fd, std::vector<uint8_t>& data);
     
@@ -169,14 +168,11 @@ private:
     MessageQueue send_queue_;
     MessageQueue recv_queue_;
     std::atomic<uint32_t> sequence_id_;
-    uint64_t start_time_ms_;
     socket_t listen_socket_;
     std::unique_ptr<std::thread> accept_thread_;
     std::unique_ptr<std::thread> receive_thread_;
     std::unique_ptr<std::thread> send_thread_;
     std::unique_ptr<std::thread> heartbeat_thread_;
-    NodeStatus local_status_;
-    std::mutex local_status_mutex_;
 };
 
 } // namespace coordinator

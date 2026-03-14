@@ -34,10 +34,6 @@ bool VariableManager::exists(const std::string& name, Scope scope) const {
     const auto& vars = getScopeMap(scope);
     return vars.find(name) != vars.end();
 }
-void VariableManager::remove(const std::string& name, Scope scope) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    getScopeMap(scope).erase(name);
-}
 void VariableManager::clearScope(Scope scope) {
     std::lock_guard<std::mutex> lock(mutex_);
     getScopeMap(scope).clear();
@@ -283,18 +279,6 @@ bool VariableManager::restoreSnapshot(const std::string& snapshot_id) {
     local_vars_ = snapshot.local_vars;
     intermediate_vars_ = snapshot.intermediate_vars;
     return true;
-}
-std::map<std::string, VariableValue> VariableManager::getAllVariables(Scope scope) const {
-    std::lock_guard<std::mutex> lock(mutex_);
-    return getScopeMap(scope);
-}
-std::map<std::string, VariableValue> VariableManager::getAllVariables() const {
-    std::lock_guard<std::mutex> lock(mutex_);
-    std::map<std::string, VariableValue> all_vars;
-    all_vars.insert(global_vars_.begin(), global_vars_.end());
-    all_vars.insert(intermediate_vars_.begin(), intermediate_vars_.end());
-    all_vars.insert(local_vars_.begin(), local_vars_.end());
-    return all_vars;
 }
 std::map<std::string, VariableValue>& VariableManager::getScopeMap(Scope scope) {
     switch (scope) {

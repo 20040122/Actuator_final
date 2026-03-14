@@ -3,9 +3,8 @@
 
 namespace coordinator {
 
-NodeRegistry::NodeRegistry(uint64_t heartbeat_timeout_ms)
-    : heartbeat_timeout_ms_(heartbeat_timeout_ms),
-      initialized_(false) {
+NodeRegistry::NodeRegistry()
+    : initialized_(false) {
 }
 
 NodeRegistry::~NodeRegistry() {
@@ -49,7 +48,6 @@ bool NodeRegistry::registerNode(const NodeRegisterMessage& register_msg,
     info.is_online = true;
     
     nodes_[node_id] = info;
-    notifyNodeRegistered(node_id);
     
     return true;
 }
@@ -63,7 +61,6 @@ bool NodeRegistry::unregisterNode(const std::string& node_id, const std::string&
     }
     
     nodes_.erase(it);
-    notifyNodeUnregistered(node_id, reason);
     
     return true;
 }
@@ -91,15 +88,6 @@ std::vector<std::string> NodeRegistry::getAllNodeIds() const {
     }
     
     return ids;
-}
-
-void NodeRegistry::notifyNodeRegistered(const std::string& node_id) {
-    (void)node_id;
-}
-
-void NodeRegistry::notifyNodeUnregistered(const std::string& node_id, const std::string& reason) {
-    (void)node_id;
-    (void)reason;
 }
 
 }

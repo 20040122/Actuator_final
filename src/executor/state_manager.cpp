@@ -7,11 +7,6 @@ void CommandStateManager::setExecutorId(const std::string& executor_id) {
     executor_id_ = executor_id;
 }
 
-std::string CommandStateManager::getExecutorId() const {
-    std::lock_guard<std::mutex> lock(mutex_);
-    return executor_id_;
-}
-
 void CommandStateManager::updateState(const std::string& node_id, NodeState state) {
     NodeState old_state = NodeState::NOT_STARTED;
     {
@@ -23,15 +18,6 @@ void CommandStateManager::updateState(const std::string& node_id, NodeState stat
         states_[node_id] = state;
     }
     logTransition(node_id, old_state, state);
-}
-
-NodeState CommandStateManager::getState(const std::string& node_id) const {
-    std::lock_guard<std::mutex> lock(mutex_);
-    auto it = states_.find(node_id);
-    if (it != states_.end()) {
-        return it->second;
-    }
-    return NodeState::NOT_STARTED;
 }
 
 void CommandStateManager::logTransition(const std::string& node_id, 

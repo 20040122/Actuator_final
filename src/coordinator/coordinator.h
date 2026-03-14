@@ -16,8 +16,11 @@
 #include "distributed_semaphore.h"
 #include "node_registry.h"
 #include "../parser/json_parser.h"
-#include "../executor/generic_executor.h"
 #include "../parser/behavior_parser.h"
+
+namespace executor {
+    class SatelliteSimulator;
+}
 
 namespace coordinator {
 
@@ -56,14 +59,11 @@ private:
     void registerLocalMessageHandlers();
     void unregisterLocalMessageHandlers();
     void handleCoordinatorMessage(const Message& message);
-    void handleSatelliteMessage(const std::string& satellite_id, const Message& message);
     void onCoordinatorBatchAck(const Message& message);
     void onCoordinatorTaskProgress(const Message& message);
     void onCoordinatorTaskComplete(const Message& message);
-    void onSatelliteBatchTaskAssign(const std::string& satellite_id, const Message& message);
     void initializeSemaphores();
-    void initializeExecutors();
-    bool executeTasksForSatellite(const std::string& satellite_id, const std::vector<TaskSegment>& tasks);
+    void initializeSimulators();
 
 private:
     CoordinatorConfig config_;
@@ -75,17 +75,13 @@ private:
     ScheduleParser::MultiSatSchedule schedule_;
     std::string schedule_file_path_;
     
-    std::map<std::string, std::shared_ptr<executor::GenericExecutor>> executors_;
-    std::map<std::string, BehaviorNode> behavior_cache_;
-    std::mutex behavior_cache_mutex_;
-    std::mutex executors_mutex_;
+    std::map<std::string, std::shared_ptr<executor::SatelliteSimulator>> simulators_;
     std::mutex task_status_mutex_;
     std::condition_variable task_status_cv_;
     std::map<std::string, bool> satellite_task_results_;
     std::map<std::string, bool> satellite_task_finished_;
     std::map<std::string, int> satellite_task_expected_counts_;
     std::map<MessageType, std::function<void(const Message&)>> coordinator_message_router_;
-    std::map<MessageType, std::function<void(const std::string&, const Message&)>> satellite_message_router_;
     
     std::atomic<bool> running_;
     std::atomic<bool> initialized_;
