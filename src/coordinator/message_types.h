@@ -5,7 +5,6 @@
 #include <vector>
 #include <map>
 #include <cstdint>
-#include <chrono>
 
 namespace coordinator {
 
@@ -74,22 +73,6 @@ struct MessageHeader {
     static constexpr uint16_t PROTOCOL_VERSION = 0x0100;
 };
 
-struct HeartbeatMessage {
-    std::string     node_id;           
-    uint64_t        uptime_ms;         
-    NodeStatus      status;             
-    uint8_t         cpu_usage_percent;  
-    uint8_t         memory_usage_percent; 
-    int8_t          battery_percent;    
-    uint32_t        active_tasks;       
-    uint32_t        pending_messages;   
-};
-
-struct HeartbeatAck {
-    std::string     node_id;            
-    uint64_t        server_time_ms;     
-    bool            sync_required;      
-};
 
 struct NodeCapability {
     std::string     capability_id;      
@@ -107,13 +90,6 @@ struct NodeRegisterMessage {
     std::map<std::string, std::string> metadata; 
 };
 
-struct NodeRegisterAck {
-    bool            success;            
-    std::string     assigned_node_id;   
-    std::string     coordinator_id;     
-    uint32_t        heartbeat_interval_ms;  
-    std::string     error_message;     
-};
 
 struct TaskTarget {
     double          latitude_deg;       
@@ -159,13 +135,6 @@ struct TaskAssignMessage {
     TaskConstraints constraints;        
 };
 
-struct TaskAssignAck {
-    std::string     segment_id;         
-    std::string     task_id;            
-    bool            accepted;           
-    std::string     reject_reason;      
-    std::string     estimated_start;    
-};
 
 struct BatchTaskAssignMessage {
     std::string     message_id;         
@@ -220,74 +189,6 @@ struct TaskCompleteMessage {
     std::map<std::string, std::string> output_data;  
 };
 
-struct TaskAbortMessage {
-    std::string     segment_id;         
-    std::string     task_id;            
-    std::string     abort_reason;       
-    bool            recoverable;        
-};
-
-struct StateSyncRequest {
-    std::string     requester_id;       
-    std::vector<std::string> sync_items; 
-    bool            full_sync;          
-    uint64_t        last_sync_time_ms;  
-};
-
-struct NodeStateData {
-    std::string     node_id;           
-    NodeStatus      status;             
-    int             battery_percent;    
-    int             storage_available_mb; 
-    std::string     payload_status;     
-    std::vector<std::string> active_tasks;  
-    uint64_t        last_update_ms;     
-};
-
-struct StateSyncResponse {
-    std::string     responder_id;       
-    std::vector<NodeStateData> node_states;  
-    std::map<std::string, int> semaphore_status; 
-    uint64_t        sync_time_ms;       
-};
-
-struct BarrierWaitMessage {
-    std::string     sync_id;            
-    std::string     node_id;            
-    std::string     barrier_type;       
-    NodeStatus      current_status;     
-    uint64_t        arrival_time_ms;    
-};
-
-struct BarrierReleaseMessage {
-    std::string     sync_id;            
-    std::vector<std::string> participants;  
-    std::vector<std::string> missing_nodes; 
-    bool            all_arrived;        
-    std::string     release_reason;     
-};
-
-enum class ErrorCode : uint16_t {
-    SUCCESS             = 0,
-    UNKNOWN_ERROR       = 1,
-    INVALID_MESSAGE     = 2,
-    TIMEOUT             = 3,
-    NODE_NOT_FOUND      = 4,
-    TASK_NOT_FOUND      = 6,
-    PERMISSION_DENIED   = 7,
-    RESOURCE_UNAVAILABLE= 8,
-    NETWORK_ERROR       = 9,
-    PROTOCOL_ERROR      = 10,
-    INTERNAL_ERROR      = 11
-};
-
-struct ErrorResponse {
-    ErrorCode       error_code;         
-    std::string     error_message;      
-    std::string     original_msg_type;  
-    uint32_t        original_seq_id;    
-    std::map<std::string, std::string> details; 
-};
 
 struct Message {
     MessageHeader   header;           

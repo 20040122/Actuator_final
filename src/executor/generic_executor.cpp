@@ -285,8 +285,7 @@ GenericExecutor::GenericExecutor(const ExecutorConfig& config)
     : config_(config)
     , running_(false)
     , var_mgr_()
-    , evaluator_(var_mgr_)
-    , state_mgr_() {
+    , evaluator_(var_mgr_) {
 }
 
 GenericExecutor::~GenericExecutor() {
@@ -299,9 +298,6 @@ bool GenericExecutor::initialize() {
     }
     
     running_.store(true);
-    
-    // 设置状态管理器的执行器ID
-    state_mgr_.setExecutorId(config_.executor_id);
     
     if (config_.async_mode && config_.max_concurrent_tasks > 0) {
         for (int i = 0; i < config_.max_concurrent_tasks; ++i) {
@@ -434,9 +430,8 @@ ExecutionResult GenericExecutor::executeTaskInternal(
     
     log("INFO", "开始执行任务: " + task.segment_id);
     
-    state_mgr_.reset();
     initializeTaskContext(task);
-    ctx->snapshot_id = var_mgr_.createSnapshot("task_" + task.segment_id);
+    ctx->snapshot_id = var_mgr_.createSnapshot();
     
     try {
         BehaviorTreeParser parser;
@@ -616,13 +611,13 @@ ExecutionResult GenericExecutor::executeNode(
         ConstraintResult constraint_result = evaluator_.evaluateDetailed(node.expression);
         if (!constraint_result.satisfied) {
             log("DEBUG", "前置条件不满足: " + constraint_result.message);
-            state_mgr_.updateState(node.name, NodeState::BLOCKED);
+            LOG_DEBUG("状态转换 [" + node.name + "]: NOT_STARTED -> BLOCKED");
             return ExecutionResult::Failure("前置条件不满足: " + constraint_result.message, node.name);
         }
         log("DEBUG", "前置条件通过");
     }
     
-    state_mgr_.updateState(node.name, NodeState::RUNNING);
+    LOG_DEBUG("状态转换 [" + node.name + "]: NOT_STARTED -> RUNNING");
     
     ExecutionResult result;
     
@@ -658,7 +653,7 @@ ExecutionResult GenericExecutor::executeNode(
         }
     }
     
-    state_mgr_.updateState(node.name, result.success ? NodeState::SUCCESS : NodeState::FAILED);
+    LOG_DEBUG("状态转换 [" + node.name + "]: RUNNING -> " + (result.success ? "SUCCESS" : "FAILED"));
     log("DEBUG", "节点执行结果: " + node.name + " -> " + (result.success ? "成功" : "失败"));
     
     return result;

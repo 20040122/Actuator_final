@@ -11,6 +11,27 @@ using namespace coordinator;
 
 namespace {
 
+std::vector<uint8_t> jsonToPayload(const json& j) {
+    const std::string s = j.dump();
+    return std::vector<uint8_t>(s.begin(), s.end());
+}
+
+Message buildMessage(MessageType type, const std::string& source, const std::string& dest,
+                     Priority priority, std::vector<uint8_t> payload) {
+    Message msg;
+    msg.header.magic = MessageHeader::MAGIC_NUMBER;
+    msg.header.version = MessageHeader::PROTOCOL_VERSION;
+    msg.header.msg_type = type;
+    msg.header.source_node_id = source;
+    msg.header.dest_node_id = dest;
+    msg.header.priority = priority;
+    msg.header.timestamp_ms = ::getCurrentTimeMs();
+    msg.payload = std::move(payload);
+    msg.header.payload_size = static_cast<uint32_t>(msg.payload.size());
+    msg.header.checksum = 0;
+    return msg;
+}
+
 std::string jsonValueToString(const json& value) {
     if (value.is_string()) return value.get<std::string>();
     if (value.is_number_integer()) return std::to_string(value.get<int>());
@@ -79,8 +100,7 @@ std::vector<uint8_t> serializeTaskProgressPayload(const TaskProgressMessage& pro
     j["current_action"] = progress.current_action;
     j["message"] = progress.message;
     j["output_vars"] = progress.output_vars;
-    const std::string s = j.dump();
-    return std::vector<uint8_t>(s.begin(), s.end());
+    return jsonToPayload(j);
 }
 
 std::vector<uint8_t> serializeTaskCompletePayload(const TaskCompleteMessage& complete) {
@@ -93,8 +113,7 @@ std::vector<uint8_t> serializeTaskCompletePayload(const TaskCompleteMessage& com
     j["actual_profit"] = complete.actual_profit;
     j["result_summary"] = complete.result_summary;
     j["output_data"] = complete.output_data;
-    const std::string s = j.dump();
-    return std::vector<uint8_t>(s.begin(), s.end());
+    return jsonToPayload(j);
 }
 
 std::vector<uint8_t> serializeBatchTaskAssignAckPayload(const BatchTaskAssignAck& ack) {
@@ -107,8 +126,7 @@ std::vector<uint8_t> serializeBatchTaskAssignAckPayload(const BatchTaskAssignAck
     j["accepted_task_ids"] = ack.accepted_task_ids;
     j["rejected_task_ids"] = ack.rejected_task_ids;
     j["rejection_reasons"] = ack.rejection_reasons;
-    const std::string s = j.dump();
-    return std::vector<uint8_t>(s.begin(), s.end());
+    return jsonToPayload(j);
 }
 
 } // anonymous namespace
@@ -206,18 +224,9 @@ void SatelliteSimulator::handleBatchTaskAssign(const Message& message) {
             progress.current_action = "execute_task";
             progress.message = "task started";
 
-            Message progress_msg;
-            progress_msg.header.magic = MessageHeader::MAGIC_NUMBER;
-            progress_msg.header.version = MessageHeader::PROTOCOL_VERSION;
-            progress_msg.header.msg_type = MessageType::TASK_PROGRESS;
-            progress_msg.header.source_node_id = sat_id;
-            progress_msg.header.dest_node_id = coord_id;
-            progress_msg.header.priority = Priority::NORMAL;
-            progress_msg.header.timestamp_ms = ::getCurrentTimeMs();
-            progress_msg.payload = serializeTaskProgressPayload(progress);
-            progress_msg.header.payload_size = static_cast<uint32_t>(progress_msg.payload.size());
-            progress_msg.header.checksum = 0;
-            comm_->sendMessage(coord_id, progress_msg);
+            comm_->sendMessage(coord_id, buildMessage(
+                MessageType::TASK_PROGRESS, sat_id, coord_id,
+                Priority::NORMAL, serializeTaskProgressPayload(progress)));
 
             bool task_ok = executeSingleTask(task);
             completed++;
@@ -233,18 +242,10 @@ void SatelliteSimulator::handleBatchTaskAssign(const Message& message) {
             complete.actual_profit = 0;
             complete.result_summary = task_ok ? "task completed" : "task failed";
 
-            Message complete_msg;
-            complete_msg.header.magic = MessageHeader::MAGIC_NUMBER;
-            complete_msg.header.version = MessageHeader::PROTOCOL_VERSION;
-            complete_msg.header.msg_type = MessageType::TASK_COMPLETE;
-            complete_msg.header.source_node_id = sat_id;
-            complete_msg.header.dest_node_id = coord_id;
-            complete_msg.header.priority = task_ok ? Priority::NORMAL : Priority::URGENT;
-            complete_msg.header.timestamp_ms = ::getCurrentTimeMs();
-            complete_msg.payload = serializeTaskCompletePayload(complete);
-            complete_msg.header.payload_size = static_cast<uint32_t>(complete_msg.payload.size());
-            complete_msg.header.checksum = 0;
-            comm_->sendMessage(coord_id, complete_msg);
+            comm_->sendMessage(coord_id, buildMessage(
+                MessageType::TASK_COMPLETE, sat_id, coord_id,
+                task_ok ? Priority::NORMAL : Priority::URGENT,
+                serializeTaskCompletePayload(complete)));
 
             if (task_ok) {
                 ack.accepted_task_ids.push_back(task.task_id);
@@ -258,19 +259,9 @@ void SatelliteSimulator::handleBatchTaskAssign(const Message& message) {
     }
 
     // Send ACK
-    Message ack_message;
-    ack_message.header.magic = MessageHeader::MAGIC_NUMBER;
-    ack_message.header.version = MessageHeader::PROTOCOL_VERSION;
-    ack_message.header.msg_type = MessageType::BATCH_TASK_ASSIGN_ACK;
-    ack_message.header.source_node_id = sat_id;
-    ack_message.header.dest_node_id = coord_id;
-    ack_message.header.priority = Priority::NORMAL;
-    ack_message.header.timestamp_ms = ::getCurrentTimeMs();
-    ack_message.payload = serializeBatchTaskAssignAckPayload(ack);
-    ack_message.header.payload_size = static_cast<uint32_t>(ack_message.payload.size());
-    ack_message.header.checksum = 0;
-
-    comm_->sendMessage(coord_id, ack_message);
+    comm_->sendMessage(coord_id, buildMessage(
+        MessageType::BATCH_TASK_ASSIGN_ACK, sat_id, coord_id,
+        Priority::NORMAL, serializeBatchTaskAssignAckPayload(ack)));
 }
 
 bool SatelliteSimulator::executeSingleTask(const TaskSegment& task) {

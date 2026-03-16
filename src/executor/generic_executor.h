@@ -18,7 +18,6 @@
 #include "../core/types.h"
 #include "../core/logger.h"
 #include "../constraint/evaluator.h"
-#include "state_manager.h"
 #include "variable_manager.h"
 
 namespace executor {
@@ -118,7 +117,6 @@ private:
     
     VariableManager var_mgr_;
     ConstraintEvaluator evaluator_;
-    CommandStateManager state_mgr_;
     
     struct PendingTask {
         TaskSegment task;

@@ -7,7 +7,6 @@
 #include <stdexcept>
 #include <mutex>
 #include <sstream>
-#include <ctime>
 #include "../third_party/nlohmann/json.hpp"
 
 enum class Scope { 
@@ -64,11 +63,9 @@ private:
 };
 struct VariableSnapshot {
     std::string snapshot_id;
-    std::time_t timestamp;
     std::map<std::string, VariableValue> global_vars;
     std::map<std::string, VariableValue> local_vars;
     std::map<std::string, VariableValue> intermediate_vars;
-    std::string description;
 };
 class VariableManager {
 public:
@@ -76,13 +73,12 @@ public:
     void set(const std::string& name, const VariableValue& value, Scope scope);
     VariableValue get(const std::string& name) const;
     bool exists(const std::string& name) const;
-    bool exists(const std::string& name, Scope scope) const;
     void clearScope(Scope scope);
     void clearLocal() { clearScope(Scope::LOCAL); }
 
     void loadFromScheduleConfig(const std::string& schedule_json_path, const std::string& satellite_id = "");
     void setFromParams(const std::map<std::string, std::string>& params, Scope scope);
-    std::string createSnapshot(const std::string& description = "");
+    std::string createSnapshot();
     bool restoreSnapshot(const std::string& snapshot_id);
 private:
     std::map<std::string, VariableValue> global_vars_;

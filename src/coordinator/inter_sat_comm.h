@@ -132,7 +132,6 @@ public:
     bool isRunning() const { return running_.load(); }
     
     bool sendMessage(const std::string& dest_node_id, const Message& message);
-    bool sendBatchTaskAssign(const std::string& dest_node_id, const BatchTaskAssignMessage& batch_tasks);
     void registerLocalHandler(const std::string& node_id, MessageHandler handler);
     void unregisterLocalHandler(const std::string& node_id);
     
@@ -146,10 +145,7 @@ private:
     void processReceivedMessage(const Message& message);
     void addNode(const RemoteNode& node);
     void removeNode(const std::string& node_id);
-    void updateNodeHeartbeat(const std::string& node_id);
     void checkNodeTimeouts();
-    Message buildMessage(MessageType type, const std::string& dest_node_id,
-                         const std::vector<uint8_t>& payload);
     uint32_t getNextSequenceId();
     bool initializeSocket();
     void cleanupSocket();

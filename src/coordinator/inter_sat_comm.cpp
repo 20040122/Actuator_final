@@ -518,13 +518,6 @@ bool InterSatComm::sendMessage(const std::string& dest_node_id, const Message& m
     return send_queue_.push(outbound);
 }
 
-bool InterSatComm::sendBatchTaskAssign(const std::string& dest_node_id, 
-                                       const BatchTaskAssignMessage& batch_tasks) {
-    auto payload = MessageSerializer::serializeBatchTaskAssign(batch_tasks);
-    Message msg = buildMessage(MessageType::BATCH_TASK_ASSIGN, dest_node_id, payload);
-    return sendMessage(dest_node_id, msg);
-}
-
 void InterSatComm::registerLocalHandler(const std::string& node_id, MessageHandler handler) {
     if (node_id.empty() || !handler) {
         return;
@@ -736,14 +729,6 @@ void InterSatComm::removeNode(const std::string& node_id) {
     }
 }
 
-void InterSatComm::updateNodeHeartbeat(const std::string& node_id) {
-    std::lock_guard<std::mutex> lock(nodes_mutex_);
-    auto it = nodes_.find(node_id);
-    if (it != nodes_.end()) {
-        it->second.last_heartbeat_time_ms = ::getCurrentTimeMs();
-    }
-}
-
 void InterSatComm::checkNodeTimeouts() {
     uint64_t now = ::getCurrentTimeMs();
     std::vector<std::string> timed_out_nodes;
@@ -760,25 +745,6 @@ void InterSatComm::checkNodeTimeouts() {
     for (const auto& node_id : timed_out_nodes) {
         removeNode(node_id);
     }
-}
-
-Message InterSatComm::buildMessage(MessageType type, 
-                                   const std::string& dest_node_id,
-                                   const std::vector<uint8_t>& payload) {
-    Message msg;
-    msg.header.magic = MessageHeader::MAGIC_NUMBER;
-    msg.header.version = MessageHeader::PROTOCOL_VERSION;
-    msg.header.msg_type = type;
-    msg.header.sequence_id = getNextSequenceId();
-    msg.header.timestamp_ms = ::getCurrentTimeMs();
-    msg.header.source_node_id = config_.node_id;
-    msg.header.dest_node_id = dest_node_id;
-    msg.header.priority = Priority::NORMAL;
-    msg.header.payload_size = static_cast<uint32_t>(payload.size());
-    msg.payload = payload;
-    msg.header.checksum = 0;
-    
-    return msg;
 }
 
 uint32_t InterSatComm::getNextSequenceId() {
