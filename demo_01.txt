@@ -1,0 +1,140 @@
+// ===== API 声明（系统库提供，用户只调用）=====
+api bool Send(float x, float y, float z, float min_dist, bool is_target);
+api bool Receive(float x, float y, float z, float min_dist, bool is_target);
+api bool MoveTo(float x, float y, float z);
+api bool ReportTarget(float x, float y, float z);
+api float sqrt(float x);
+
+// ===== 任务：去空间站 =====
+mission GoToStation {
+  float sx = 0.0;
+  float sy = 0.0;
+  float sz = 0.0;
+  float tx = 0.0;
+  float ty = 0.0;
+  float tz = 0.0;
+
+  Observation {
+    sx: POS_X;
+    sy: POS_Y;
+    sz: POS_Z;
+  }
+
+  Decision {
+    {
+      MoveTo(tx, ty, tz);
+    }
+  }
+
+  Orientation { sx == tx && sy == ty && sz == tz }
+  Decision {
+    {
+      nextTask;
+    }
+  }
+
+  Action {
+    CMD_X: tx;
+    CMD_Y: ty;
+    CMD_Z: tz;
+  }
+}
+
+// ===== 任务：搜索 =====
+mission Search {
+  const float inf = 1000000.0;
+  const string target = "alpha";
+  const string target_true = "alpha_true";
+
+  float x = 0.0;
+  float y = 0.0;
+  float z = 0.0;
+  float tx = 0.0;
+  float ty = 0.0;
+  float tz = 0.0;
+  float dist = 0.0;
+  float min_dist = inf;
+  float dx = 0.0;
+  float dy = 0.0;
+  float dz = 0.0;
+  bool is_target = false;
+  bool is_light = false;
+  string rec_type = "";
+  string rec_type_true = "";
+
+  Observation {
+    rec_type: REC;
+    rec_type_true: REC_TRUE;
+    x: POS_X;
+    y: POS_Y;
+    z: POS_Z;
+    tx: TARGET_X;
+    ty: TARGET_Y;
+    tz: TARGET_Z;
+  }
+
+  Decision {
+    {
+      is_target = (rec_type == target);
+    }
+  }
+
+  Orientation { is_target }
+  Decision {
+    {
+      dx = x - tx;
+      dy = y - ty;
+      dz = z - tz;
+      dist = sqrt(dx * dx + dy * dy + dz * dz);
+      Send(x, y, z, dist, true);
+    }
+  }
+
+  Decision {
+    {
+      is_target = Receive(tx, ty, tz, min_dist, is_target);
+    }
+  }
+
+  Orientation { is_target }
+  Decision {
+    {
+      dx = x - tx;
+      dy = y - ty;
+      dz = z - tz;
+      dist = sqrt(dx * dx + dy * dy + dz * dz);
+    }
+  }
+
+  Orientation { { dist < min_dist } { dist == min_dist } }
+  Decision {
+    {
+      min_dist = dist;
+      Send(x, y, z, dist, true);
+      MoveTo(tx, ty, tz);
+    }
+    {
+      MoveTo(tx, ty, tz);
+    }
+  }
+
+  Orientation { x == tx && y == ty && z == tz }
+  Orientation { rec_type_true == target_true }
+  Decision {
+    {
+      ReportTarget(tx, ty, tz);
+      is_light = true;
+      exit;
+    }
+  }
+
+  Action {
+    LIGHT: is_light;
+  }
+}
+
+// ===== 群组：任务驱动 =====
+GroupTasks {
+  [1,2,3,4,5] = {GoToStation, Search};
+  [6] = {Search};
+}

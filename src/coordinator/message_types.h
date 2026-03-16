@@ -34,15 +34,6 @@ enum class MessageType : uint16_t {
     BARRIER_WAIT        = 0x0204,   
     BARRIER_RELEASE     = 0x0205,   
 
-    SEM_ACQUIRE_REQUEST = 0x0301,  
-    SEM_ACQUIRE_GRANTED = 0x0302,   
-    SEM_ACQUIRE_DENIED  = 0x0303,   
-    SEM_ACQUIRE_QUEUED  = 0x0304,   
-    SEM_RELEASE         = 0x0305,   
-    SEM_RELEASE_ACK     = 0x0306,   
-    SEM_STATUS_QUERY    = 0x0307,   
-    SEM_STATUS_RESPONSE = 0x0308,  
-    
     ERROR_RESPONSE      = 0xFF01,   
     TIMEOUT_NOTIFICATION= 0xFF02,   
     
@@ -130,18 +121,6 @@ struct TaskTarget {
     std::string     target_name;        
 };
 
-struct TaskWindow {
-    std::string     window_id;          
-    int             window_seq;         
-    std::string     start;              
-    std::string     end;                
-};
-
-struct TaskExecution {
-    std::string     planned_start;     
-    std::string     planned_end;        
-    int             duration_s;         
-};
 
 struct ResourceRequirement {
     std::string     resource_id;        
@@ -174,8 +153,6 @@ struct TaskAssignMessage {
     Priority        priority;           
     int             profit;             
     TaskTarget      target;             
-    TaskWindow      window;             
-    TaskExecution   execution;          
     std::string     behavior_ref;       
     std::map<std::string, std::string> behavior_params;  
     std::vector<ResourceRequirement> resource_requirements; 
@@ -290,32 +267,12 @@ struct BarrierReleaseMessage {
     std::string     release_reason;     
 };
 
-struct SemaphoreStatusQuery {
-    std::string     requester_id;       
-    std::vector<std::string> semaphore_ids;  
-};
-
-struct SemaphoreStatus {
-    std::string     semaphore_id;       
-    std::string     resource_name;      
-    int             max_permits;        
-    int             available_permits;  
-    std::vector<std::string> holders;   
-    int             queue_length;       
-};
-
-struct SemaphoreStatusResponse {
-    std::vector<SemaphoreStatus> statuses;  
-    uint64_t        query_time_ms;      
-};
-
 enum class ErrorCode : uint16_t {
     SUCCESS             = 0,
     UNKNOWN_ERROR       = 1,
     INVALID_MESSAGE     = 2,
     TIMEOUT             = 3,
     NODE_NOT_FOUND      = 4,
-    SEMAPHORE_NOT_FOUND = 5,
     TASK_NOT_FOUND      = 6,
     PERMISSION_DENIED   = 7,
     RESOURCE_UNAVAILABLE= 8,
@@ -372,14 +329,6 @@ inline const char* messageTypeToString(MessageType type) {
         case MessageType::STATE_BROADCAST:      return "STATE_BROADCAST";
         case MessageType::BARRIER_WAIT:         return "BARRIER_WAIT";
         case MessageType::BARRIER_RELEASE:      return "BARRIER_RELEASE";
-        case MessageType::SEM_ACQUIRE_REQUEST:  return "SEM_ACQUIRE_REQUEST";
-        case MessageType::SEM_ACQUIRE_GRANTED:  return "SEM_ACQUIRE_GRANTED";
-        case MessageType::SEM_ACQUIRE_DENIED:   return "SEM_ACQUIRE_DENIED";
-        case MessageType::SEM_ACQUIRE_QUEUED:   return "SEM_ACQUIRE_QUEUED";
-        case MessageType::SEM_RELEASE:          return "SEM_RELEASE";
-        case MessageType::SEM_RELEASE_ACK:      return "SEM_RELEASE_ACK";
-        case MessageType::SEM_STATUS_QUERY:     return "SEM_STATUS_QUERY";
-        case MessageType::SEM_STATUS_RESPONSE:  return "SEM_STATUS_RESPONSE";
         case MessageType::ERROR_RESPONSE:       return "ERROR_RESPONSE";
         case MessageType::TIMEOUT_NOTIFICATION: return "TIMEOUT_NOTIFICATION";
         default:                                return "UNKNOWN";

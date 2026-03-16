@@ -21,10 +21,6 @@
 #include "state_manager.h"
 #include "variable_manager.h"
 
-namespace coordinator {
-    class DistributedSemaphore;
-}
-
 namespace executor {
 
 struct ExecutionResult {
@@ -115,8 +111,6 @@ public:
     
     VariableManager& getVariableManager() { return var_mgr_; }
     const VariableManager& getVariableManager() const { return var_mgr_; }
-    
-    void setDistributedSemaphore(std::shared_ptr<coordinator::DistributedSemaphore> sem_mgr);
 
 private:
     ExecutorConfig config_;
@@ -125,7 +119,6 @@ private:
     VariableManager var_mgr_;
     ConstraintEvaluator evaluator_;
     CommandStateManager state_mgr_;
-    std::shared_ptr<coordinator::DistributedSemaphore> distributed_sem_mgr_;
     
     struct PendingTask {
         TaskSegment task;
@@ -152,6 +145,9 @@ private:
     );
     
     void initializeTaskContext(const TaskSegment& task);
+    void initializeBehaviorDefaults(const BehaviorNode& node);
+    void applyObservationValues(const BehaviorNode& node);
+    VariableValue evaluateValueExpression(const std::string& expression);
     
     ExecutionResult executeNode(
         const BehaviorNode& node,

@@ -10,7 +10,6 @@
 #include "../core/types.h"
 #include "../coordinator/inter_sat_comm.h"
 #include "../coordinator/message_types.h"
-#include "../coordinator/distributed_semaphore.h"
 #include "../parser/json_parser.h"
 #include "../parser/behavior_parser.h"
 #include "generic_executor.h"
@@ -36,8 +35,7 @@ public:
     SatelliteSimulator& operator=(const SatelliteSimulator&) = delete;
 
     bool initialize(
-        std::shared_ptr<coordinator::InterSatComm> comm,
-        std::shared_ptr<coordinator::DistributedSemaphore> semaphore_mgr
+        std::shared_ptr<coordinator::InterSatComm> comm
     );
     void shutdown();
 
@@ -51,7 +49,6 @@ private:
 
     SatelliteSimulatorConfig config_;
     std::shared_ptr<coordinator::InterSatComm> comm_;
-    std::shared_ptr<coordinator::DistributedSemaphore> semaphore_mgr_;
     std::shared_ptr<GenericExecutor> executor_;
 
     std::map<std::string, BehaviorNode> behavior_cache_;

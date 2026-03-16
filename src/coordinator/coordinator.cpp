@@ -122,23 +122,15 @@ Coordinator::~Coordinator() {
     shutdown();
 }
 
-bool Coordinator::initialize(const std::string& global_config_file, const std::string& schedule_file) {
+bool Coordinator::initialize(const std::string& schedule_file) {
     if (initialized_.load()) {
         return true;
     }
     
     std::cout << "\n[Coordinator] ===== 初始化阶段 =====" << std::endl;
     
-    // Step 1: 加载全局配置
-    std::cout << "[Coordinator] Step 1: 加载全局配置..." << std::endl;
-    if (!loadGlobalConfig(global_config_file)) {
-        std::cerr << "[Coordinator] ERROR: Failed to load global configuration!" << std::endl;
-        return false;
-    }
-    std::cout << "[Coordinator] ✓ 全局配置加载完成 (计划ID: " << global_config_.plan_id << ")" << std::endl;
-    
-    // Step 2: 加载调度任务
-    std::cout << "[Coordinator] Step 2: 加载调度任务" << std::endl;
+    // Step 1: 加载调度任务
+    std::cout << "[Coordinator] Step 1: 加载调度任务" << std::endl;
     schedule_file_path_ = schedule_file;
     if (!loadSchedule(schedule_file)) {
         std::cerr << "[Coordinator] ERROR: Failed to load schedule!" << std::endl;
@@ -146,8 +138,8 @@ bool Coordinator::initialize(const std::string& global_config_file, const std::s
     }
     std::cout << "[Coordinator] ✓ 调度任务加载完成 (" << schedule_.satellite_ids.size() << " 颗卫星)" << std::endl;
     
-    // Step 3: 初始化节点注册表
-    std::cout << "[Coordinator] Step 3: 初始化节点注册表" << std::endl;
+    // Step 2: 初始化节点注册表
+    std::cout << "[Coordinator] Step 2: 初始化节点注册表" << std::endl;
     node_registry_ = std::make_shared<NodeRegistry>();
     if (!node_registry_->initialize()) {
         std::cerr << "[Coordinator] ERROR: Node registry initialization failed!" << std::endl;
@@ -155,15 +147,15 @@ bool Coordinator::initialize(const std::string& global_config_file, const std::s
     }
     std::cout << "[Coordinator] ✓ 节点注册表初始化完成" << std::endl;
     
-    // Step 4: 注册卫星节点
-    std::cout << "[Coordinator] Step 4: 注册卫星节点" << std::endl;
+    // Step 3: 注册卫星节点
+    std::cout << "[Coordinator] Step 3: 注册卫星节点" << std::endl;
     if (!registerSatelliteNodes(schedule_)) {
         std::cerr << "[Coordinator] ERROR: Failed to register satellite nodes!" << std::endl;
         return false;
     }
     
-    // Step 5: 初始化通信模块
-    std::cout << "[Coordinator] Step 5: 初始化通信模块" << std::endl;
+    // Step 4: 初始化通信模块
+    std::cout << "[Coordinator] Step 4: 初始化通信模块" << std::endl;
     CommConfig comm_config = CommConfig::getDefault();
     comm_config.node_id = config_.coordinator_id;
     comm_config.node_name = "Main Coordinator";
@@ -178,17 +170,7 @@ bool Coordinator::initialize(const std::string& global_config_file, const std::s
     }
     std::cout << "[Coordinator] ✓ 通信模块初始化完成" << std::endl;
     
-    // Step 6: 初始化信号量管理器
-    std::cout << "[Coordinator] Step 6: 初始化信号量管理器" << std::endl;
-    semaphore_mgr_ = std::make_shared<DistributedSemaphore>();
-    if (!semaphore_mgr_->initialize(comm_, config_.coordinator_id)) {
-        std::cerr << "[Coordinator] ERROR: Semaphore manager initialization failed!" << std::endl;
-        return false;
-    }
-    initializeSemaphores();
-    std::cout << "[Coordinator] ✓ 信号量管理器初始化完成" << std::endl;
-    
-    std::cout << "[Coordinator] Step 7: 初始化卫星模拟器" << std::endl;
+    std::cout << "[Coordinator] Step 5: 初始化卫星模拟器" << std::endl;
     initializeSimulators();
     std::cout << "[Coordinator] ✓ 卫星模拟器初始化完成 (" << simulators_.size() << " 个模拟器)" << std::endl;
 
@@ -237,10 +219,6 @@ void Coordinator::shutdown() {
         std::cout << "[Coordinator] ✓ 节点注册表已关闭" << std::endl;
     }
     
-    if (semaphore_mgr_) {
-        semaphore_mgr_->clear();
-    }
-    
     for (auto& pair : simulators_) {
         if (pair.second) {
             pair.second->shutdown();
@@ -251,17 +229,6 @@ void Coordinator::shutdown() {
     
     initialized_.store(false);
     std::cout << "[Coordinator] ✓ 协调器已关闭" << std::endl;
-}
-
-bool Coordinator::loadGlobalConfig(const std::string& config_file) {
-    GlobalConfigParser parser;
-    global_config_ = parser.parse(config_file);
-    
-    if (global_config_.plan_id.empty()) {
-        return false;
-    }
-    
-    return true;
 }
 
 bool Coordinator::loadSchedule(const std::string& schedule_file) {
@@ -288,7 +255,7 @@ void Coordinator::run() {
 
     running_.store(true);
     
-    LOG("\n[Coordinator] Step 8: 执行任务");
+    LOG("\n[Coordinator] Step 7: 执行任务");
 
     {
         std::lock_guard<std::mutex> lock(task_status_mutex_);
@@ -373,10 +340,6 @@ void Coordinator::initializeMessageRouters() {
     coordinator_message_router_[MessageType::TASK_COMPLETE] = [this](const Message& message) {
         onCoordinatorTaskComplete(message);
     };
-    // Semaphore messages are handled locally by the shared semaphore_mgr_;
-    // these entries suppress "unregistered message type" warnings.
-    coordinator_message_router_[MessageType::SEM_ACQUIRE_REQUEST] = [](const Message&) {};
-    coordinator_message_router_[MessageType::SEM_RELEASE] = [](const Message&) {};
 }
 
 void Coordinator::registerLocalMessageHandlers() {
@@ -510,9 +473,13 @@ void Coordinator::onCoordinatorTaskComplete(const Message& message) {
 bool Coordinator::registerSatelliteNodes(const ScheduleParser::MultiSatSchedule& schedule) {
     int registered_count = 0;
     for (const auto& sat_info : schedule.satellites) {
+        const std::string comm_node_id = sat_info.node_id.empty()
+            ? sat_info.satellite_id
+            : sat_info.node_id;
+
         NodeRegisterMessage register_msg;
-        register_msg.node_id = sat_info.satellite_id;
-        register_msg.node_name = sat_info.name;
+        register_msg.node_id = comm_node_id;
+        register_msg.node_name = sat_info.name.empty() ? sat_info.satellite_id : sat_info.name;
         register_msg.node_type = "SATELLITE";
         register_msg.ip_address = "";
         register_msg.port = 0;
@@ -520,14 +487,10 @@ bool Coordinator::registerSatelliteNodes(const ScheduleParser::MultiSatSchedule&
         NodeCapability imaging_cap;
         imaging_cap.capability_id = "imaging";
         imaging_cap.description = "Imaging payload capability";
-        imaging_cap.params["payload_status"] = sat_info.payload_status;
         register_msg.capabilities.push_back(imaging_cap);
         
-        register_msg.metadata["node_id"] = sat_info.node_id;
-        register_msg.metadata["status"] = sat_info.status;
-        register_msg.metadata["battery_percent"] = std::to_string(sat_info.battery_percent);
-        register_msg.metadata["storage_available_mb"] = std::to_string(sat_info.storage_available_mb);
-        register_msg.metadata["thermal_status"] = sat_info.thermal_status;
+        register_msg.metadata["satellite_id"] = sat_info.satellite_id;
+        register_msg.metadata["node_id"] = comm_node_id;
         
         std::string assigned_id;
         if (node_registry_->registerNode(register_msg, assigned_id)) {
@@ -571,9 +534,7 @@ bool Coordinator::distributeAllTasks(const ScheduleParser::MultiSatSchedule& sch
         {
             std::ostringstream oss;
             oss << "[Coordinator] 分发任务 -> " << sat_id
-                << " (" << node_it->name << "), tasks=" << tasks.size()
-                << ", battery=" << node_it->battery_percent << "%"
-                << ", storage=" << node_it->storage_available_mb << "MB";
+                << " (" << node_it->name << "), tasks=" << tasks.size();
             LOG(oss.str());
         }
         
@@ -581,7 +542,7 @@ bool Coordinator::distributeAllTasks(const ScheduleParser::MultiSatSchedule& sch
         msg.message_id = "BATCH_" + sat_id + "_" + std::to_string(::getCurrentTimeMs());
         msg.satellite_id = sat_id;
         msg.node_id = node_it->node_id;
-        msg.plan_id = schedule.plan_id;
+        msg.plan_id = "";
         msg.timestamp = ::getCurrentTimeMs();
         msg.require_ack = true;
         msg.ack_timeout_ms = 60000;
@@ -597,25 +558,13 @@ bool Coordinator::distributeAllTasks(const ScheduleParser::MultiSatSchedule& sch
             task_msg.behavior_params = task.behavior_params;
             task_msg.priority = Priority::NORMAL;
             
-            task_msg.execution.planned_start = task.execution.planned_start;
-            task_msg.execution.planned_end = task.execution.planned_end;
-            task_msg.execution.duration_s = task.execution.duration_s;
-            
-            task_msg.window.window_id = task.window.window_id;
-            task_msg.window.window_seq = task.window.window_seq;
-            task_msg.window.start = task.window.start;
-            task_msg.window.end = task.window.end;
-            
             msg.scheduled_tasks.push_back(task_msg);
 
             std::ostringstream task_debug;
             task_debug << "[Coordinator][Dispatch] [" << task_num << "/" << tasks.size() << "] "
                        << "task=" << task.task_id
                        << ", segment=" << task.segment_id
-                       << ", behavior=" << task.behavior_ref
-                       << ", window=" << task.window.start << "~" << task.window.end
-                       << ", exec=" << task.execution.planned_start << "~" << task.execution.planned_end
-                       << ", duration=" << task.execution.duration_s << "s";
+                       << ", behavior=" << task.behavior_ref;
             if (!task.behavior_params.empty()) {
                 task_debug << ", params={";
                 bool first = true;
@@ -650,48 +599,6 @@ bool Coordinator::distributeAllTasks(const ScheduleParser::MultiSatSchedule& sch
     return success_count == total_tasks;
 }
 
-void Coordinator::initializeSemaphores() {
-    if (!semaphore_mgr_) {
-        return;
-    }
-    
-    for (const auto& sem_cfg : global_config_.semaphores) {
-        DistributedSemaphoreConfig config;
-        config.semaphore_id = sem_cfg.semaphore_id;
-        config.resource_name = sem_cfg.resource_name;
-        config.max_permits = sem_cfg.max_permits;
-        config.available_permits = sem_cfg.available_permits;
-        config.default_timeout_s = sem_cfg.timeout_s;
-        config.priority_enabled = sem_cfg.priority_enabled;
-        
-        if (sem_cfg.resource_type == "GROUND_STATION") {
-            config.resource_type = ResourceType::GROUND_STATION;
-        } else if (sem_cfg.resource_type == "RELAY_SATELLITE") {
-            config.resource_type = ResourceType::RELAY_SATELLITE;
-        } else if (sem_cfg.resource_type == "OBSERVATION_TARGET") {
-            config.resource_type = ResourceType::OBSERVATION_TARGET;
-        } else {
-            config.resource_type = ResourceType::UNKNOWN;
-        }
-        
-        if (sem_cfg.queue_policy == "FIFO") {
-            config.queue_policy = SemaphoreQueuePolicy::FIFO;
-        } else if (sem_cfg.queue_policy == "PRIORITY") {
-            config.queue_policy = SemaphoreQueuePolicy::PRIORITY;
-        } else if (sem_cfg.queue_policy == "DEADLINE") {
-            config.queue_policy = SemaphoreQueuePolicy::DEADLINE;
-        } else {
-            config.queue_policy = SemaphoreQueuePolicy::FIFO;
-        }
-        
-        semaphore_mgr_->registerSemaphore(config);
-    }
-    
-    if (!global_config_.semaphores.empty()) {
-        std::cout << "[Coordinator] ✓ 注册 " << global_config_.semaphores.size() << " 个信号量" << std::endl;
-    }
-}
-
 void Coordinator::initializeSimulators() {
     for (const auto& sat_info : schedule_.satellites) {
         executor::SatelliteSimulatorConfig sim_config;
@@ -700,7 +607,7 @@ void Coordinator::initializeSimulators() {
         sim_config.schedule_file_path = schedule_file_path_;
 
         auto simulator = std::make_shared<executor::SatelliteSimulator>(sim_config);
-        if (simulator->initialize(comm_, semaphore_mgr_)) {
+        if (simulator->initialize(comm_)) {
             simulators_[sat_info.satellite_id] = simulator;
             std::cout << "[Coordinator]   ✓ 卫星模拟器已创建: " << sat_info.satellite_id << std::endl;
         } else {

@@ -301,15 +301,6 @@ std::vector<uint8_t> MessageSerializer::serializeBatchTaskAssign(const BatchTask
         task_j["target"]["latitude_deg"] = task.target.latitude_deg;
         task_j["target"]["longitude_deg"] = task.target.longitude_deg;
         
-        task_j["window"]["window_id"] = task.window.window_id;
-        task_j["window"]["window_seq"] = task.window.window_seq;
-        task_j["window"]["start"] = task.window.start;
-        task_j["window"]["end"] = task.window.end;
-        
-        task_j["execution"]["planned_start"] = task.execution.planned_start;
-        task_j["execution"]["planned_end"] = task.execution.planned_end;
-        task_j["execution"]["duration_s"] = task.execution.duration_s;
-        
         task_j["behavior_ref"] = task.behavior_ref;
         task_j["behavior_params"] = task.behavior_params;
         

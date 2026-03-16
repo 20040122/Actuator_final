@@ -79,7 +79,7 @@ public:
     bool exists(const std::string& name, Scope scope) const;
     void clearScope(Scope scope);
     void clearLocal() { clearScope(Scope::LOCAL); }
-    void loadFromGlobalConfig(const std::string& global_json_path);
+
     void loadFromScheduleConfig(const std::string& schedule_json_path, const std::string& satellite_id = "");
     void setFromParams(const std::map<std::string, std::string>& params, Scope scope);
     std::string createSnapshot(const std::string& description = "");

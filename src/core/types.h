@@ -42,6 +42,9 @@ struct BehaviorNode {
     std::string expression;
     std::vector<std::string> variables;
     std::string command;
+    std::map<std::string, std::string> constants;       // 常量名 -> 值
+    std::map<std::string, std::string> variable_inits;  // 变量名 -> 初始值
+    std::map<std::string, std::string> observation;     // 变量名 -> 传感器名
 };
 
 
@@ -51,17 +54,6 @@ struct TaskSegment {
     std::string satellite_id;
     std::string behavior_ref; 
     std::map<std::string, std::string> behavior_params;
-    struct {
-        std::string planned_start;
-        std::string planned_end;
-        int duration_s;
-    } execution;
-    struct {
-        std::string window_id;
-        int window_seq;
-        std::string start; 
-        std::string end;   
-    } window;
 };
 
 

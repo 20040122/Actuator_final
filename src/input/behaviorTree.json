@@ -1,92 +1,343 @@
 {
     "behavior_definitions": {
-        "Observation_Mission": {
+        "GoToStation": {
             "type": "Sequence",
-            "name": "Observation_Mission",
+            "name": "GoToStation",
+            "variables": {
+                "sx": { "type": "float", "init": 0.0 },
+                "sy": { "type": "float", "init": 0.0 },
+                "sz": { "type": "float", "init": 0.0 },
+                "tx": { "type": "float", "init": 0.0 },
+                "ty": { "type": "float", "init": 0.0 },
+                "tz": { "type": "float", "init": 0.0 }
+            },
             "children": [
                 {
                     "type": "Condition",
-                    "name": "Check_Prerequisites",
-                    "expression": "battery > 20 && storage_available > 100 && payload_status == 'READY'",
-                    "variables": [
-                        "battery",
-                        "storage_available",
-                        "payload_status"
-                    ]
+                    "name": "Observe_Position",
+                    "observation": {
+                        "sx": "POS_X",
+                        "sy": "POS_Y",
+                        "sz": "POS_Z"
+                    }
                 },
+                {
+                    "type": "Action",
+                    "name": "Move_To_Station",
+                    "command": "MOVE_TO",
+                    "params": {
+                        "x": "${tx}",
+                        "y": "${ty}",
+                        "z": "${tz}"
+                    }
+                },
+                {
+                    "type": "Action",
+                    "name": "Output_Command",
+                    "command": "EMIT_COMMAND",
+                    "params": {
+                        "CMD_X": "${tx}",
+                        "CMD_Y": "${ty}",
+                        "CMD_Z": "${tz}"
+                    }
+                },
+                {
+                    "type": "Selector",
+                    "name": "Arrived_Branch",
+                    "children": [
+                        {
+                            "type": "Sequence",
+                            "name": "On_Arrived",
+                            "children": [
+                                {
+                                    "type": "Condition",
+                                    "name": "Check_Arrived",
+                                    "expression": "sx == tx && sy == ty && sz == tz"
+                                },
+                                {
+                                    "type": "Action",
+                                    "name": "Next_Task",
+                                    "command": "NEXT_TASK"
+                                }
+                            ]
+                        },
+                        {
+                            "type": "Action",
+                            "name": "Skip_Next_Task_When_Not_Arrived",
+                            "command": "NO_OP"
+                        }
+                    ]
+                }
+            ]
+        },
+        "Search": {
+            "type": "Sequence",
+            "name": "Search",
+            "constants": {
+                "inf": { "type": "float", "value": 1000000.0 },
+                "target": { "type": "string", "value": "alpha" },
+                "target_true": { "type": "string", "value": "alpha_true" }
+            },
+            "variables": {
+                "x": { "type": "float", "init": 0.0 },
+                "y": { "type": "float", "init": 0.0 },
+                "z": { "type": "float", "init": 0.0 },
+                "tx": { "type": "float", "init": 0.0 },
+                "ty": { "type": "float", "init": 0.0 },
+                "tz": { "type": "float", "init": 0.0 },
+                "dist": { "type": "float", "init": 0.0 },
+                "min_dist": { "type": "float", "init": 1000000.0 },
+                "dx": { "type": "float", "init": 0.0 },
+                "dy": { "type": "float", "init": 0.0 },
+                "dz": { "type": "float", "init": 0.0 },
+                "is_target": { "type": "bool", "init": false },
+                "is_light": { "type": "bool", "init": false },
+                "rec_type": { "type": "string", "init": "" },
+                "rec_type_true": { "type": "string", "init": "" }
+            },
+            "children": [
                 {
                     "type": "Condition",
-                    "name": "Check_Time_Window",
-                    "expression": "current_time >= window_start && current_time <= window_end",
-                    "variables": [
-                        "current_time",
-                        "window_start",
-                        "window_end"
+                    "name": "Observe_State",
+                    "observation": {
+                        "rec_type": "REC",
+                        "rec_type_true": "REC_TRUE",
+                        "x": "POS_X",
+                        "y": "POS_Y",
+                        "z": "POS_Z",
+                        "tx": "TARGET_X",
+                        "ty": "TARGET_Y",
+                        "tz": "TARGET_Z"
+                    }
+                },
+                {
+                    "type": "Action",
+                    "name": "Check_Is_Target",
+                    "command": "ASSIGN",
+                    "params": {
+                        "is_target": "rec_type == target"
+                    }
+                },
+                {
+                    "type": "Selector",
+                    "name": "Target_Detected_Branch",
+                    "children": [
+                        {
+                            "type": "Sequence",
+                            "name": "On_Target_Detected",
+                            "children": [
+                                {
+                                    "type": "Condition",
+                                    "name": "Is_Target",
+                                    "expression": "is_target == true"
+                                },
+                                {
+                                    "type": "Action",
+                                    "name": "Calc_Distance",
+                                    "command": "ASSIGN",
+                                    "params": {
+                                        "dx": "x - tx",
+                                        "dy": "y - ty",
+                                        "dz": "z - tz",
+                                        "dist": "sqrt(dx * dx + dy * dy + dz * dz)"
+                                    }
+                                },
+                                {
+                                    "type": "Action",
+                                    "name": "Broadcast_Position",
+                                    "command": "SEND",
+                                    "params": {
+                                        "x": "${x}",
+                                        "y": "${y}",
+                                        "z": "${z}",
+                                        "min_dist": "${dist}",
+                                        "is_target": true
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "type": "Action",
+                            "name": "Skip_On_No_Target",
+                            "command": "NO_OP"
+                        }
                     ]
                 },
                 {
                     "type": "Action",
-                    "name": "Acquire_Semaphore",
-                    "command": "SEMAPHORE_ACQUIRE",
+                    "name": "Receive_Broadcast",
+                    "command": "RECEIVE",
                     "params": {
-                        "semaphore_id": "${resource_semaphore}",
-                        "timeout_s": 30
+                        "tx": "${tx}",
+                        "ty": "${ty}",
+                        "tz": "${tz}",
+                        "min_dist": "${min_dist}",
+                        "is_target": "${is_target}",
+                        "result_to": "is_target"
                     }
                 },
                 {
-                    "type": "Action",
-                    "name": "Attitude_Adjustment",
-                    "command": "ATTITUDE_ADJUST",
-                    "params": {
-                        "target_lat": "${target_lat}",
-                        "target_lon": "${target_lon}",
-                        "mode": "TARGET_POINTING"
-                    }
+                    "type": "Selector",
+                    "name": "Post_Receive_Branch",
+                    "children": [
+                        {
+                            "type": "Sequence",
+                            "name": "On_Receive_Is_Target",
+                            "children": [
+                                {
+                                    "type": "Condition",
+                                    "name": "Is_Target_After_Receive",
+                                    "expression": "is_target == true"
+                                },
+                                {
+                                    "type": "Action",
+                                    "name": "Recalc_Distance",
+                                    "command": "ASSIGN",
+                                    "params": {
+                                        "dx": "x - tx",
+                                        "dy": "y - ty",
+                                        "dz": "z - tz",
+                                        "dist": "sqrt(dx * dx + dy * dy + dz * dz)"
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "type": "Action",
+                            "name": "Skip_When_Receive_Not_Target",
+                            "command": "NO_OP"
+                        }
+                    ]
+                },
+                {
+                    "type": "Selector",
+                    "name": "Distance_Compare_Branch",
+                    "children": [
+                        {
+                            "type": "Sequence",
+                            "name": "Closer_Than_Min",
+                            "children": [
+                                {
+                                    "type": "Condition",
+                                    "name": "Dist_Less_Than_Min",
+                                    "expression": "dist < min_dist"
+                                },
+                                {
+                                    "type": "Action",
+                                    "name": "Update_Min_And_Send",
+                                    "command": "ASSIGN",
+                                    "params": {
+                                        "min_dist": "dist"
+                                    }
+                                },
+                                {
+                                    "type": "Action",
+                                    "name": "Send_Updated",
+                                    "command": "SEND",
+                                    "params": {
+                                        "x": "${x}",
+                                        "y": "${y}",
+                                        "z": "${z}",
+                                        "min_dist": "${dist}",
+                                        "is_target": true
+                                    }
+                                },
+                                {
+                                    "type": "Action",
+                                    "name": "Move_To_Target_Closer",
+                                    "command": "MOVE_TO",
+                                    "params": {
+                                        "x": "${tx}",
+                                        "y": "${ty}",
+                                        "z": "${tz}"
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "type": "Sequence",
+                            "name": "Equal_To_Min",
+                            "children": [
+                                {
+                                    "type": "Condition",
+                                    "name": "Dist_Equal_Min",
+                                    "expression": "dist == min_dist"
+                                },
+                                {
+                                    "type": "Action",
+                                    "name": "Move_To_Target_Equal",
+                                    "command": "MOVE_TO",
+                                    "params": {
+                                        "x": "${tx}",
+                                        "y": "${ty}",
+                                        "z": "${tz}"
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "type": "Action",
+                            "name": "Skip_When_Distance_Not_Eligible",
+                            "command": "NO_OP"
+                        }
+                    ]
+                },
+                {
+                    "type": "Selector",
+                    "name": "Confirm_And_Report",
+                    "children": [
+                        {
+                            "type": "Sequence",
+                            "name": "On_Confirmed_True_Target",
+                            "children": [
+                                {
+                                    "type": "Condition",
+                                    "name": "Check_At_Target",
+                                    "expression": "x == tx && y == ty && z == tz"
+                                },
+                                {
+                                    "type": "Condition",
+                                    "name": "Check_True_Target",
+                                    "expression": "rec_type_true == target_true"
+                                },
+                                {
+                                    "type": "Action",
+                                    "name": "Report_Target",
+                                    "command": "REPORT_TARGET",
+                                    "params": {
+                                        "x": "${tx}",
+                                        "y": "${ty}",
+                                        "z": "${tz}"
+                                    }
+                                },
+                                {
+                                    "type": "Action",
+                                    "name": "Set_Light",
+                                    "command": "ASSIGN",
+                                    "params": {
+                                        "is_light": true
+                                    }
+                                },
+                                {
+                                    "type": "Action",
+                                    "name": "Exit_Mission",
+                                    "command": "EXIT"
+                                }
+                            ]
+                        },
+                        {
+                            "type": "Action",
+                            "name": "Skip_When_Not_Confirmed_Target",
+                            "command": "NO_OP"
+                        }
+                    ]
                 },
                 {
                     "type": "Action",
-                    "name": "Configure_Payload",
-                    "command": "PAYLOAD_CONFIG",
+                    "name": "Output_Light",
+                    "command": "EMIT_COMMAND",
                     "params": {
-                        "mode": "OBSERVATION",
-                        "resolution": "${resolution}"
-                    }
-                },
-                {
-                    "type": "Action",
-                    "name": "Execute_Observation",
-                    "command": "PAYLOAD_CAPTURE",
-                    "params": {
-                        "target_lat": "${target_lat}",
-                        "target_lon": "${target_lon}",
-                        "duration_s": "${observation_duration_s}"
-                    }
-                },
-                {
-                    "type": "Action",
-                    "name": "Store_Data",
-                    "command": "DATA_STORE",
-                    "params": {
-                        "task_id": "${task_id}",
-                        "compress": true
-                    }
-                },
-                {
-                    "type": "Action",
-                    "name": "Release_Semaphore",
-                    "command": "SEMAPHORE_RELEASE",
-                    "params": {
-                        "semaphore_id": "${resource_semaphore}"
-                    }
-                },
-                {
-                    "type": "Action",
-                    "name": "Report_Complete",
-                    "command": "EMIT_EVENT",
-                    "params": {
-                        "event": "OBSERVATION_COMPLETE",
-                        "task_id": "${task_id}",
-                        "profit": "${profit}"
+                        "LIGHT": "${is_light}"
                     }
                 }
             ]

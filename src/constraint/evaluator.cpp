@@ -1,6 +1,7 @@
 #include "evaluator.h"
 #include <algorithm>
 #include <cctype>
+#include <cmath>
 
 bool ConstraintEvaluator::evaluate(const std::string& expression) {
     return evaluateDetailed(expression).satisfied;
@@ -227,6 +228,40 @@ bool ConstraintEvaluator::parsePrimary(const std::vector<Token>& tokens, size_t&
 }
 
 bool ConstraintEvaluator::compare(const VariableValue& left, const std::string& op, const VariableValue& right) {
+    if (left.getType() == VariableValue::Type::BOOL || right.getType() == VariableValue::Type::BOOL) {
+        auto toBool = [](const VariableValue& value) {
+            switch (value.getType()) {
+                case VariableValue::Type::BOOL:
+                    return value.asBool();
+                case VariableValue::Type::INT:
+                    return value.asInt() != 0;
+                case VariableValue::Type::DOUBLE:
+                    return std::abs(value.asDouble()) > 1e-9;
+                case VariableValue::Type::STRING: {
+                    const std::string text = value.asString();
+                    if (text == "true" || text == "TRUE" || text == "True") {
+                        return true;
+                    }
+                    if (text == "false" || text == "FALSE" || text == "False") {
+                        return false;
+                    }
+                    return !text.empty();
+                }
+                default:
+                    return false;
+            }
+        };
+
+        const bool left_bool = toBool(left);
+        const bool right_bool = toBool(right);
+        if (op == "==" || op == "=") return left_bool == right_bool;
+        if (op == "!=") return left_bool != right_bool;
+        if (op == "<") return static_cast<int>(left_bool) < static_cast<int>(right_bool);
+        if (op == ">") return static_cast<int>(left_bool) > static_cast<int>(right_bool);
+        if (op == "<=") return static_cast<int>(left_bool) <= static_cast<int>(right_bool);
+        if (op == ">=") return static_cast<int>(left_bool) >= static_cast<int>(right_bool);
+    }
+
     if (left.getType() == VariableValue::Type::STRING || right.getType() == VariableValue::Type::STRING) {
         std::string left_str = left.asString();
         std::string right_str = right.asString();

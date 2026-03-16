@@ -45,21 +45,6 @@ bool parseBatchTaskAssignPayload(const std::vector<uint8_t>& payload, BatchTaskA
                 task.profit = task_j.value("profit", 0);
                 task.behavior_ref = task_j.value("behavior_ref", "");
 
-                if (task_j.contains("window")) {
-                    const auto& win = task_j["window"];
-                    task.window.window_id = win.value("window_id", "");
-                    task.window.window_seq = win.value("window_seq", 0);
-                    task.window.start = win.value("start", "");
-                    task.window.end = win.value("end", "");
-                }
-
-                if (task_j.contains("execution")) {
-                    const auto& exec = task_j["execution"];
-                    task.execution.planned_start = exec.value("planned_start", "");
-                    task.execution.planned_end = exec.value("planned_end", "");
-                    task.execution.duration_s = exec.value("duration_s", 0);
-                }
-
                 if (task_j.contains("behavior_params")) {
                     for (auto it = task_j["behavior_params"].begin(); it != task_j["behavior_params"].end(); ++it) {
                         task.behavior_params[it.key()] = jsonValueToString(it.value());
@@ -82,13 +67,6 @@ TaskSegment taskAssignToSegment(const TaskAssignMessage& task, const std::string
     segment.satellite_id = satellite_id;
     segment.behavior_ref = task.behavior_ref;
     segment.behavior_params = task.behavior_params;
-    segment.execution.planned_start = task.execution.planned_start;
-    segment.execution.planned_end = task.execution.planned_end;
-    segment.execution.duration_s = task.execution.duration_s;
-    segment.window.window_id = task.window.window_id;
-    segment.window.window_seq = task.window.window_seq;
-    segment.window.start = task.window.start;
-    segment.window.end = task.window.end;
     return segment;
 }
 
@@ -144,11 +122,9 @@ SatelliteSimulator::~SatelliteSimulator() {
 }
 
 bool SatelliteSimulator::initialize(
-    std::shared_ptr<InterSatComm> comm,
-    std::shared_ptr<DistributedSemaphore> semaphore_mgr
+    std::shared_ptr<InterSatComm> comm
 ) {
     comm_ = comm;
-    semaphore_mgr_ = semaphore_mgr;
 
     ExecutorConfig exec_config = ExecutorConfig::getDefault(config_.satellite_id);
     exec_config.async_mode = false;
@@ -160,8 +136,6 @@ bool SatelliteSimulator::initialize(
         LOG_ERROR("[SatelliteSimulator] 执行器初始化失败: " + config_.satellite_id);
         return false;
     }
-
-    executor_->setDistributedSemaphore(semaphore_mgr_);
 
     if (!config_.schedule_file_path.empty()) {
         try {
@@ -186,7 +160,6 @@ void SatelliteSimulator::shutdown() {
         executor_.reset();
     }
     comm_.reset();
-    semaphore_mgr_.reset();
 }
 
 void SatelliteSimulator::handleMessage(const Message& message) {
@@ -255,8 +228,8 @@ void SatelliteSimulator::handleBatchTaskAssign(const Message& message) {
             complete.segment_id = task.segment_id;
             complete.task_id = task.task_id;
             complete.success = task_ok;
-            complete.actual_start = task.execution.planned_start;
-            complete.actual_end = task.execution.planned_end;
+            complete.actual_start = "";
+            complete.actual_end = "";
             complete.actual_profit = 0;
             complete.result_summary = task_ok ? "task completed" : "task failed";
 

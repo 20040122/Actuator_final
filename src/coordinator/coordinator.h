@@ -13,7 +13,6 @@
 
 #include "inter_sat_comm.h"
 #include "message_types.h"
-#include "distributed_semaphore.h"
 #include "node_registry.h"
 #include "../parser/json_parser.h"
 #include "../parser/behavior_parser.h"
@@ -44,14 +43,13 @@ public:
     Coordinator(const Coordinator&) = delete;
     Coordinator& operator=(const Coordinator&) = delete;
     
-    bool initialize(const std::string& global_config_file, const std::string& schedule_file);
+    bool initialize(const std::string& schedule_file);
     void shutdown();
     
     void run();
     void stop();
 
 private:
-    bool loadGlobalConfig(const std::string& config_file);
     bool loadSchedule(const std::string& schedule_file);
     bool registerSatelliteNodes(const ScheduleParser::MultiSatSchedule& schedule);
     bool distributeAllTasks(const ScheduleParser::MultiSatSchedule& schedule);
@@ -62,16 +60,13 @@ private:
     void onCoordinatorBatchAck(const Message& message);
     void onCoordinatorTaskProgress(const Message& message);
     void onCoordinatorTaskComplete(const Message& message);
-    void initializeSemaphores();
     void initializeSimulators();
 
 private:
     CoordinatorConfig config_;
     std::shared_ptr<InterSatComm> comm_;
     std::shared_ptr<NodeRegistry> node_registry_;
-    std::shared_ptr<DistributedSemaphore> semaphore_mgr_;
     
-    GlobalConfigParser::GlobalConfig global_config_;
     ScheduleParser::MultiSatSchedule schedule_;
     std::string schedule_file_path_;
     

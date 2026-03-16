@@ -13,6 +13,7 @@ namespace coordinator {
 
 struct NodeInfo {
     std::string node_id;
+    std::string satellite_id;
     std::string node_name;
     std::string node_type;
     NodeStatus status;
@@ -44,7 +45,11 @@ public:
     std::vector<std::string> getAllNodeIds() const;
 
 private:
+    std::string resolveNodeIdLocked(const std::string& node_id) const;
+    void eraseAliasesLocked(const std::string& canonical_node_id);
+
     std::map<std::string, NodeInfo> nodes_;
+    std::map<std::string, std::string> alias_to_node_id_;
     mutable std::mutex mutex_;
     bool initialized_;
 };

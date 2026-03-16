@@ -35,7 +35,7 @@ int main(int argc, char* argv[]) {
     
     g_coordinator = std::make_shared<Coordinator>(config);
     
-    if (!g_coordinator->initialize("src/input/global.json", "src/input/schedule.json")) {
+    if (!g_coordinator->initialize("src/input/schedule.json")) {
         LOG_ERROR("[Main] 协调器初始化失败!");
         return -1;
     }
