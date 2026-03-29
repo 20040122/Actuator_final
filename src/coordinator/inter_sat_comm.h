@@ -16,7 +16,6 @@
 #include "message_types.h"
 #include "../core/types.h"
 
-// 平台相关的 socket 类型定义
 #ifdef _WIN32
     #include <winsock2.h>
     typedef SOCKET socket_t;
@@ -113,7 +112,6 @@ private:
 class MessageSerializer {
 public:
     static std::vector<uint8_t> serialize(const Message& message);
-    static std::vector<uint8_t> serializeHeader(const MessageHeader& header);
     static std::vector<uint8_t> serializeBatchTaskAssign(const BatchTaskAssignMessage& msg);
 };
 
@@ -129,13 +127,9 @@ public:
     bool initialize();
     bool start();
     void stop();
-    bool isRunning() const { return running_.load(); }
-    
     bool sendMessage(const std::string& dest_node_id, const Message& message);
     void registerLocalHandler(const std::string& node_id, MessageHandler handler);
     void unregisterLocalHandler(const std::string& node_id);
-    
-    const CommConfig& getConfig() const { return config_; }
     
 private:
     void acceptThreadFunc();

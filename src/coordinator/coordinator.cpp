@@ -436,20 +436,6 @@ void Coordinator::onCoordinatorTaskProgress(const Message& message) {
         LOG_ERROR("[Coordinator] ERROR: 无法解析 TASK_PROGRESS payload");
         return;
     }
-
-    std::ostringstream oss;
-    oss << "[Coordinator] 进度上报: sat=" << message.header.source_node_id
-        << ", task=" << progress.task_id
-        << ", segment=" << progress.segment_id
-        << ", status=" << taskStatusToString(progress.status)
-        << ", progress=" << static_cast<int>(progress.progress_percent) << "%";
-    if (!progress.current_action.empty()) {
-        oss << ", action=" << progress.current_action;
-    }
-    if (!progress.message.empty()) {
-        oss << ", msg=" << progress.message;
-    }
-    LOG(oss.str());
 }
 
 void Coordinator::onCoordinatorTaskComplete(const Message& message) {
@@ -458,16 +444,6 @@ void Coordinator::onCoordinatorTaskComplete(const Message& message) {
         LOG_ERROR("[Coordinator] ERROR: 无法解析 TASK_COMPLETE payload");
         return;
     }
-
-    std::ostringstream oss;
-    oss << "[Coordinator] 完成上报: sat=" << message.header.source_node_id
-        << ", task=" << complete.task_id
-        << ", segment=" << complete.segment_id
-        << ", result=" << (complete.success ? "SUCCESS" : "FAILED");
-    if (!complete.result_summary.empty()) {
-        oss << ", summary=" << complete.result_summary;
-    }
-    LOG(oss.str());
 }
 
 bool Coordinator::registerSatelliteNodes(const ScheduleParser::MultiSatSchedule& schedule) {

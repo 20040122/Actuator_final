@@ -79,6 +79,53 @@ bool readUint64BE(const std::vector<uint8_t>& data, size_t& pos, uint64_t& out) 
     return true;
 }
 
+std::vector<uint8_t> serializeHeaderLocal(const MessageHeader& header) {
+    std::vector<uint8_t> data;
+    const size_t header_size =
+        4 + 2 + 2 + 4 + 8 +
+        1 + header.source_node_id.size() +
+        1 + header.dest_node_id.size() +
+        1 + 4 + 4;
+    data.reserve(header_size);
+    data.push_back((header.magic >> 24) & 0xFF);
+    data.push_back((header.magic >> 16) & 0xFF);
+    data.push_back((header.magic >> 8) & 0xFF);
+    data.push_back(header.magic & 0xFF);
+    data.push_back((header.version >> 8) & 0xFF);
+    data.push_back(header.version & 0xFF);
+    uint16_t msg_type = static_cast<uint16_t>(header.msg_type);
+    data.push_back((msg_type >> 8) & 0xFF);
+    data.push_back(msg_type & 0xFF);
+    data.push_back((header.sequence_id >> 24) & 0xFF);
+    data.push_back((header.sequence_id >> 16) & 0xFF);
+    data.push_back((header.sequence_id >> 8) & 0xFF);
+    data.push_back(header.sequence_id & 0xFF);
+    data.push_back((header.timestamp_ms >> 56) & 0xFF);
+    data.push_back((header.timestamp_ms >> 48) & 0xFF);
+    data.push_back((header.timestamp_ms >> 40) & 0xFF);
+    data.push_back((header.timestamp_ms >> 32) & 0xFF);
+    data.push_back((header.timestamp_ms >> 24) & 0xFF);
+    data.push_back((header.timestamp_ms >> 16) & 0xFF);
+    data.push_back((header.timestamp_ms >> 8) & 0xFF);
+    data.push_back(header.timestamp_ms & 0xFF);
+    uint8_t src_len = static_cast<uint8_t>(header.source_node_id.length());
+    data.push_back(src_len);
+    data.insert(data.end(), header.source_node_id.begin(), header.source_node_id.end());
+    uint8_t dst_len = static_cast<uint8_t>(header.dest_node_id.length());
+    data.push_back(dst_len);
+    data.insert(data.end(), header.dest_node_id.begin(), header.dest_node_id.end());
+    data.push_back(static_cast<uint8_t>(header.priority));
+    data.push_back((header.payload_size >> 24) & 0xFF);
+    data.push_back((header.payload_size >> 16) & 0xFF);
+    data.push_back((header.payload_size >> 8) & 0xFF);
+    data.push_back(header.payload_size & 0xFF);
+    data.push_back((header.checksum >> 24) & 0xFF);
+    data.push_back((header.checksum >> 16) & 0xFF);
+    data.push_back((header.checksum >> 8) & 0xFF);
+    data.push_back(header.checksum & 0xFF);
+    return data;
+}
+
 bool readString(const std::vector<uint8_t>& data, size_t& pos, uint8_t length, std::string& out) {
     if (pos + length > data.size()) {
         return false;
@@ -224,60 +271,13 @@ void MessageQueue::clear() {
     }
 }
 
-// MessageSerializer ʵ��
 std::vector<uint8_t> MessageSerializer::serialize(const Message& message) {
-    auto header_data = serializeHeader(message.header);
+    auto header_data = serializeHeaderLocal(message.header);
     std::vector<uint8_t> result;
     result.reserve(header_data.size() + message.payload.size());
     result.insert(result.end(), header_data.begin(), header_data.end());
     result.insert(result.end(), message.payload.begin(), message.payload.end());
     return result;
-}
-std::vector<uint8_t> MessageSerializer::serializeHeader(const MessageHeader& header) {
-    std::vector<uint8_t> data;
-    const size_t header_size =
-        4 + 2 + 2 + 4 + 8 +
-        1 + header.source_node_id.size() +
-        1 + header.dest_node_id.size() +
-        1 + 4 + 4;
-    data.reserve(header_size);
-    data.push_back((header.magic >> 24) & 0xFF);
-    data.push_back((header.magic >> 16) & 0xFF);
-    data.push_back((header.magic >> 8) & 0xFF);
-    data.push_back(header.magic & 0xFF);
-    data.push_back((header.version >> 8) & 0xFF);
-    data.push_back(header.version & 0xFF);
-    uint16_t msg_type = static_cast<uint16_t>(header.msg_type);
-    data.push_back((msg_type >> 8) & 0xFF);
-    data.push_back(msg_type & 0xFF);
-    data.push_back((header.sequence_id >> 24) & 0xFF);
-    data.push_back((header.sequence_id >> 16) & 0xFF);
-    data.push_back((header.sequence_id >> 8) & 0xFF);
-    data.push_back(header.sequence_id & 0xFF);
-    data.push_back((header.timestamp_ms >> 56) & 0xFF);
-    data.push_back((header.timestamp_ms >> 48) & 0xFF);
-    data.push_back((header.timestamp_ms >> 40) & 0xFF);
-    data.push_back((header.timestamp_ms >> 32) & 0xFF);
-    data.push_back((header.timestamp_ms >> 24) & 0xFF);
-    data.push_back((header.timestamp_ms >> 16) & 0xFF);
-    data.push_back((header.timestamp_ms >> 8) & 0xFF);
-    data.push_back(header.timestamp_ms & 0xFF);
-    uint8_t src_len = static_cast<uint8_t>(header.source_node_id.length());
-    data.push_back(src_len);
-    data.insert(data.end(), header.source_node_id.begin(), header.source_node_id.end());
-    uint8_t dst_len = static_cast<uint8_t>(header.dest_node_id.length());
-    data.push_back(dst_len);
-    data.insert(data.end(), header.dest_node_id.begin(), header.dest_node_id.end());
-    data.push_back(static_cast<uint8_t>(header.priority));
-    data.push_back((header.payload_size >> 24) & 0xFF);
-    data.push_back((header.payload_size >> 16) & 0xFF);
-    data.push_back((header.payload_size >> 8) & 0xFF);
-    data.push_back(header.payload_size & 0xFF);
-    data.push_back((header.checksum >> 24) & 0xFF);
-    data.push_back((header.checksum >> 16) & 0xFF);
-    data.push_back((header.checksum >> 8) & 0xFF);
-    data.push_back(header.checksum & 0xFF);
-    return data;
 }
 
 std::vector<uint8_t> MessageSerializer::serializeBatchTaskAssign(const BatchTaskAssignMessage& msg) {
