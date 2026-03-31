@@ -2,7 +2,7 @@
     "behavior_definitions": {
         "GoToStation": {
             "type": "Sequence",
-            "name": "GoToStation",
+            "name": "GoToStationRoot",
             "variables": {
                 "sx": { "type": "float", "init": 0.0 },
                 "sy": { "type": "float", "init": 0.0 },
@@ -13,8 +13,9 @@
             },
             "children": [
                 {
-                    "type": "Condition",
-                    "name": "Observe_Position",
+                    "type": "Action",
+                    "name": "ObserveCurrentPosition",
+                    "command": "NO_OP",
                     "observation": {
                         "sx": "POS_X",
                         "sy": "POS_Y",
@@ -23,7 +24,7 @@
                 },
                 {
                     "type": "Action",
-                    "name": "Move_To_Station",
+                    "name": "MoveToStation",
                     "command": "MOVE_TO",
                     "params": {
                         "x": "${tx}",
@@ -32,47 +33,47 @@
                     }
                 },
                 {
-                    "type": "Action",
-                    "name": "Output_Command",
-                    "command": "EMIT_COMMAND",
-                    "params": {
-                        "CMD_X": "${tx}",
-                        "CMD_Y": "${ty}",
-                        "CMD_Z": "${tz}"
-                    }
-                },
-                {
                     "type": "Selector",
-                    "name": "Arrived_Branch",
+                    "name": "CheckArrival",
                     "children": [
                         {
                             "type": "Sequence",
-                            "name": "On_Arrived",
+                            "name": "HandleArrival",
                             "children": [
                                 {
                                     "type": "Condition",
-                                    "name": "Check_Arrived",
+                                    "name": "HasReachedStation",
                                     "expression": "sx == tx && sy == ty && sz == tz"
                                 },
                                 {
                                     "type": "Action",
-                                    "name": "Next_Task",
+                                    "name": "AdvanceToNextTask",
                                     "command": "NEXT_TASK"
                                 }
                             ]
                         },
                         {
                             "type": "Action",
-                            "name": "Skip_Next_Task_When_Not_Arrived",
+                            "name": "WaitForArrival",
                             "command": "NO_OP"
                         }
                     ]
+                },
+                {
+                    "type": "Action",
+                    "name": "EmitMoveCommand",
+                    "command": "EMIT_COMMAND",
+                    "params": {
+                        "CMD_X": "${tx}",
+                        "CMD_Y": "${ty}",
+                        "CMD_Z": "${tz}"
+                    }
                 }
             ]
         },
         "Search": {
             "type": "Sequence",
-            "name": "Search",
+            "name": "SearchRoot",
             "constants": {
                 "inf": { "type": "float", "value": 1000000.0 },
                 "target": { "type": "string", "value": "alpha" },
@@ -97,8 +98,9 @@
             },
             "children": [
                 {
-                    "type": "Condition",
-                    "name": "Observe_State",
+                    "type": "Action",
+                    "name": "ObserveSearchInputs",
+                    "command": "NO_OP",
                     "observation": {
                         "rec_type": "REC",
                         "rec_type_true": "REC_TRUE",
@@ -112,7 +114,7 @@
                 },
                 {
                     "type": "Action",
-                    "name": "Check_Is_Target",
+                    "name": "UpdateTargetMatchFlag",
                     "command": "ASSIGN",
                     "params": {
                         "is_target": "rec_type == target"
@@ -120,20 +122,20 @@
                 },
                 {
                     "type": "Selector",
-                    "name": "Target_Detected_Branch",
+                    "name": "BroadcastDetectedTarget",
                     "children": [
                         {
                             "type": "Sequence",
-                            "name": "On_Target_Detected",
+                            "name": "HandleDetectedTarget",
                             "children": [
                                 {
                                     "type": "Condition",
-                                    "name": "Is_Target",
+                                    "name": "IsDetectedTarget",
                                     "expression": "is_target == true"
                                 },
                                 {
                                     "type": "Action",
-                                    "name": "Calc_Distance",
+                                    "name": "ComputeDetectedTargetDistance",
                                     "command": "ASSIGN",
                                     "params": {
                                         "dx": "x - tx",
@@ -144,7 +146,7 @@
                                 },
                                 {
                                     "type": "Action",
-                                    "name": "Broadcast_Position",
+                                    "name": "SendDetectedTarget",
                                     "command": "SEND",
                                     "params": {
                                         "x": "${x}",
@@ -158,14 +160,14 @@
                         },
                         {
                             "type": "Action",
-                            "name": "Skip_On_No_Target",
+                            "name": "SkipTargetBroadcast",
                             "command": "NO_OP"
                         }
                     ]
                 },
                 {
                     "type": "Action",
-                    "name": "Receive_Broadcast",
+                    "name": "ReceiveSharedTarget",
                     "command": "RECEIVE",
                     "params": {
                         "tx": "${tx}",
@@ -178,20 +180,20 @@
                 },
                 {
                     "type": "Selector",
-                    "name": "Post_Receive_Branch",
+                    "name": "RefreshSharedTargetDistance",
                     "children": [
                         {
                             "type": "Sequence",
-                            "name": "On_Receive_Is_Target",
+                            "name": "HandleSharedTarget",
                             "children": [
                                 {
                                     "type": "Condition",
-                                    "name": "Is_Target_After_Receive",
+                                    "name": "HasSharedTarget",
                                     "expression": "is_target == true"
                                 },
                                 {
                                     "type": "Action",
-                                    "name": "Recalc_Distance",
+                                    "name": "ComputeSharedTargetDistance",
                                     "command": "ASSIGN",
                                     "params": {
                                         "dx": "x - tx",
@@ -204,27 +206,27 @@
                         },
                         {
                             "type": "Action",
-                            "name": "Skip_When_Receive_Not_Target",
+                            "name": "SkipDistanceRefresh",
                             "command": "NO_OP"
                         }
                     ]
                 },
                 {
                     "type": "Selector",
-                    "name": "Distance_Compare_Branch",
+                    "name": "MoveToBestTarget",
                     "children": [
                         {
                             "type": "Sequence",
-                            "name": "Closer_Than_Min",
+                            "name": "HandleCloserTarget",
                             "children": [
                                 {
                                     "type": "Condition",
-                                    "name": "Dist_Less_Than_Min",
+                                    "name": "IsCloserThanBestTarget",
                                     "expression": "dist < min_dist"
                                 },
                                 {
                                     "type": "Action",
-                                    "name": "Update_Min_And_Send",
+                                    "name": "UpdateBestDistance",
                                     "command": "ASSIGN",
                                     "params": {
                                         "min_dist": "dist"
@@ -232,7 +234,7 @@
                                 },
                                 {
                                     "type": "Action",
-                                    "name": "Send_Updated",
+                                    "name": "ShareBestDistance",
                                     "command": "SEND",
                                     "params": {
                                         "x": "${x}",
@@ -244,7 +246,7 @@
                                 },
                                 {
                                     "type": "Action",
-                                    "name": "Move_To_Target_Closer",
+                                    "name": "MoveToCloserTarget",
                                     "command": "MOVE_TO",
                                     "params": {
                                         "x": "${tx}",
@@ -256,16 +258,16 @@
                         },
                         {
                             "type": "Sequence",
-                            "name": "Equal_To_Min",
+                            "name": "HandleEqualBestTarget",
                             "children": [
                                 {
                                     "type": "Condition",
-                                    "name": "Dist_Equal_Min",
+                                    "name": "MatchesBestDistance",
                                     "expression": "dist == min_dist"
                                 },
                                 {
                                     "type": "Action",
-                                    "name": "Move_To_Target_Equal",
+                                    "name": "MoveToEqualBestTarget",
                                     "command": "MOVE_TO",
                                     "params": {
                                         "x": "${tx}",
@@ -277,32 +279,32 @@
                         },
                         {
                             "type": "Action",
-                            "name": "Skip_When_Distance_Not_Eligible",
+                            "name": "HoldPosition",
                             "command": "NO_OP"
                         }
                     ]
                 },
                 {
                     "type": "Selector",
-                    "name": "Confirm_And_Report",
+                    "name": "ConfirmAndReportTarget",
                     "children": [
                         {
                             "type": "Sequence",
-                            "name": "On_Confirmed_True_Target",
+                            "name": "HandleConfirmedTarget",
                             "children": [
                                 {
                                     "type": "Condition",
-                                    "name": "Check_At_Target",
+                                    "name": "HasReachedTargetPosition",
                                     "expression": "x == tx && y == ty && z == tz"
                                 },
                                 {
                                     "type": "Condition",
-                                    "name": "Check_True_Target",
+                                    "name": "IsTrueTarget",
                                     "expression": "rec_type_true == target_true"
                                 },
                                 {
                                     "type": "Action",
-                                    "name": "Report_Target",
+                                    "name": "ReportTrueTarget",
                                     "command": "REPORT_TARGET",
                                     "params": {
                                         "x": "${tx}",
@@ -312,7 +314,7 @@
                                 },
                                 {
                                     "type": "Action",
-                                    "name": "Set_Light",
+                                    "name": "EnableLightSignal",
                                     "command": "ASSIGN",
                                     "params": {
                                         "is_light": true
@@ -320,21 +322,21 @@
                                 },
                                 {
                                     "type": "Action",
-                                    "name": "Exit_Mission",
+                                    "name": "ExitAfterTargetReport",
                                     "command": "EXIT"
                                 }
                             ]
                         },
                         {
                             "type": "Action",
-                            "name": "Skip_When_Not_Confirmed_Target",
+                            "name": "ContinueTargetSearch",
                             "command": "NO_OP"
                         }
                     ]
                 },
                 {
                     "type": "Action",
-                    "name": "Output_Light",
+                    "name": "EmitLightCommand",
                     "command": "EMIT_COMMAND",
                     "params": {
                         "LIGHT": "${is_light}"

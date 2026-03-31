@@ -5,6 +5,8 @@ project(Codex)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+enable_testing()
+
 file(GLOB_RECURSE CODEX_SOURCES CONFIGURE_DEPENDS
     "${CMAKE_SOURCE_DIR}/src/*.cpp"
 )
@@ -22,3 +24,5 @@ target_include_directories(main PRIVATE
 if (WIN32)
     target_link_libraries(main PRIVATE ws2_32)
 endif()
+
+add_subdirectory(tests)

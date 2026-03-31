@@ -1,4 +1,6 @@
-# 构建信息
+# Codex
+
+## 构建信息
 - **UNIX**: clang 17.0.0
 - **Windows**: g++ 15.2.0
 - **CMake**: 4.2.3
@@ -14,5 +16,4 @@ MS_LOG_LEVEL=debug ./build/main
 
 $env:MS_LOG_LEVEL = "debug"; .\build\main.exe
 ```
-
 
