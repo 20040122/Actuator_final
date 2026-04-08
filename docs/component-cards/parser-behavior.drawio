@@ -1,0 +1,31 @@
+<mxfile host="app.diagrams.net" modified="2026-04-08T00:00:00.000Z" agent="Codex" version="24.7.17" compressed="false">
+  <diagram id="parser-behavior" name="parser-behavior">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="title" value="组件卡片: parser/behavior_parser&#xa;文件: src/parser/behavior_parser.h / .cpp" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=20;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="30" width="1120" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="duty" value="职责&#xa;将行为模板实例化，把默认变量、常量和运行参数合并为当前任务可执行的行为树。" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=15;" vertex="1" parent="1">
+          <mxGeometry x="40" y="130" width="540" height="120" as="geometry"/>
+        </mxCell>
+        <mxCell id="api" value="关键类 / 函数&#xa;BehaviorTreeParser::instantiate()&#xa;buildTemplateParams()&#xa;replaceVariables()&#xa;expandNode()" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=15;" vertex="1" parent="1">
+          <mxGeometry x="620" y="130" width="540" height="120" as="geometry"/>
+        </mxCell>
+        <mxCell id="input" value="输入来源&#xa;BehaviorLibraryParser 产出的 BehaviorNode 模板&#xa;TaskSegment.behavior_params 运行参数" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=15;" vertex="1" parent="1">
+          <mxGeometry x="40" y="280" width="540" height="110" as="geometry"/>
+        </mxCell>
+        <mxCell id="output" value="输出对象&#xa;已完成参数替换的 BehaviorNode 实例&#xa;可被 GenericExecutor 直接执行" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=15;" vertex="1" parent="1">
+          <mxGeometry x="620" y="280" width="540" height="110" as="geometry"/>
+        </mxCell>
+        <mxCell id="deps" value="协作对象&#xa;BehaviorLibraryParser 提供模板&#xa;GenericExecutor 消费实例化后的行为树&#xa;core/types 提供 BehaviorNode 结构" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=15;" vertex="1" parent="1">
+          <mxGeometry x="40" y="420" width="540" height="160" as="geometry"/>
+        </mxCell>
+        <mxCell id="note" value="组件特点&#xa;1. 它是“模板”和“执行”之间的桥梁。&#xa;2. 替换逻辑递归作用于整棵树。&#xa;3. 运行时参数优先级最高，可覆盖默认值和常量。" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=15;" vertex="1" parent="1">
+          <mxGeometry x="620" y="420" width="540" height="160" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -1,0 +1,31 @@
+<mxfile host="app.diagrams.net" modified="2026-04-08T00:00:00.000Z" agent="Codex" version="24.7.17" compressed="false">
+  <diagram id="core-logger" name="core-logger">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="title" value="组件卡片: core/logger&#xa;文件: src/core/logger.h" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=20;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="30" width="1120" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="duty" value="职责&#xa;提供全局统一日志能力，支撑系统调试、流程追踪和错误定位。" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=15;" vertex="1" parent="1">
+          <mxGeometry x="40" y="130" width="540" height="120" as="geometry"/>
+        </mxCell>
+        <mxCell id="api" value="关键类 / 接口&#xa;Logger&#xa;log / logError / logDebug / logWarn&#xa;setMinLevel()&#xa;LOG / LOG_DEBUG / LOG_WARN / LOG_ERROR 宏" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=15;" vertex="1" parent="1">
+          <mxGeometry x="620" y="130" width="540" height="120" as="geometry"/>
+        </mxCell>
+        <mxCell id="input" value="输入来源&#xa;各模块提交的日志消息；环境变量 MS_LOG_LEVEL 控制最小输出级别。" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=15;" vertex="1" parent="1">
+          <mxGeometry x="40" y="280" width="540" height="110" as="geometry"/>
+        </mxCell>
+        <mxCell id="output" value="输出对象&#xa;格式化后的控制台日志，自动附带时间戳和级别前缀。" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=15;" vertex="1" parent="1">
+          <mxGeometry x="620" y="280" width="540" height="110" as="geometry"/>
+        </mxCell>
+        <mxCell id="deps" value="协作对象&#xa;Coordinator&#xa;InterSatComm&#xa;SatelliteSimulator&#xa;GenericExecutor&#xa;Parser / Constraint 模块" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=15;" vertex="1" parent="1">
+          <mxGeometry x="40" y="420" width="540" height="160" as="geometry"/>
+        </mxCell>
+        <mxCell id="note" value="组件特点&#xa;1. 单例实现，调用简单。&#xa;2. 线程安全，适合当前轻量并发场景。&#xa;3. 面向原型系统，重点是统一和可读，而非复杂日志基础设施。" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=15;" vertex="1" parent="1">
+          <mxGeometry x="620" y="420" width="540" height="160" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
