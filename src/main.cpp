@@ -31,7 +31,6 @@ int main(int argc, char* argv[]) {
     
     CoordinatorConfig config = CoordinatorConfig::getDefault();
     config.coordinator_id = "COORD_MAIN";
-    config.loop_interval_ms = 100;
     
     g_coordinator = std::make_shared<Coordinator>(config);
     

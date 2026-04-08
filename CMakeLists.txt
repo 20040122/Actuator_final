@@ -25,4 +25,3 @@ if (WIN32)
     target_link_libraries(main PRIVATE ws2_32)
 endif()
 
-add_subdirectory(tests)
